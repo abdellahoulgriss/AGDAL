@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>الصف السادس أكدال - الصفحة الرئيسية</title>
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+    <link rel="icon" type="image/png" href="favicon/favicon.png">
+    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -29,7 +32,201 @@
             100% { background-position: 0% 50%; }
         }
 
-        /* Floating elements */
+        /* MASSIVE FIREBALL EXPLOSION */
+        .nuclear-explosion {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            overflow: hidden;
+        }
+
+        .fireball {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0;
+            height: 0;
+            background: radial-gradient(
+                circle,
+                rgba(255,255,255,1) 0%,
+                rgba(255,255,0,1) 10%,
+                rgba(255,165,0,1) 25%,
+                rgba(255,69,0,1) 40%,
+                rgba(255,0,0,1) 60%,
+                rgba(139,0,0,1) 80%,
+                rgba(0,0,0,0.8) 100%
+            );
+            border-radius: 50%;
+            animation: massiveFireball 2.5s ease-out forwards;
+            filter: blur(15px) brightness(2);
+            box-shadow: 
+                0 0 200px rgba(255,255,0,0.8),
+                0 0 400px rgba(255,69,0,0.6),
+                0 0 600px rgba(255,0,0,0.4);
+        }
+
+        @keyframes massiveFireball {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 1;
+                filter: blur(5px) brightness(1);
+            }
+            15% {
+                width: 80vh;
+                height: 80vh;
+                opacity: 1;
+                filter: blur(20px) brightness(3);
+            }
+            30% {
+                width: 150vh;
+                height: 150vh;
+                opacity: 0.9;
+                filter: blur(30px) brightness(4);
+            }
+            50% {
+                width: 250vh;
+                height: 250vh;
+                opacity: 0.8;
+                filter: blur(40px) brightness(5);
+            }
+            70% {
+                width: 400vh;
+                height: 400vh;
+                opacity: 0.6;
+                filter: blur(50px) brightness(6);
+            }
+            90% {
+                width: 600vh;
+                height: 600vh;
+                opacity: 0.3;
+                filter: blur(60px) brightness(7);
+            }
+            100% {
+                width: 800vh;
+                height: 800vh;
+                opacity: 0;
+                filter: blur(70px) brightness(8);
+            }
+        }
+
+        .shockwave {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0;
+            height: 0;
+            border: 8px solid rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            animation: massiveShockwave 3s ease-out 0.3s forwards;
+            filter: blur(5px);
+            box-shadow: 0 0 100px rgba(255,255,255,0.6);
+        }
+
+        @keyframes massiveShockwave {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 1;
+                border-width: 15px;
+            }
+            50% {
+                width: 300vw;
+                height: 300vh;
+                opacity: 0.7;
+                border-width: 8px;
+            }
+            100% {
+                width: 800vw;
+                height: 800vh;
+                opacity: 0;
+                border-width: 2px;
+            }
+        }
+
+        .explosion-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .explosion-particle {
+            position: absolute;
+            background: radial-gradient(circle, #ffff00, #ff6b00, #ff0000);
+            border-radius: 50%;
+            animation: explosionParticleFly 2s ease-out forwards;
+            filter: blur(8px) brightness(3);
+            box-shadow: 0 0 30px rgba(255,255,0,0.8);
+        }
+
+        @keyframes explosionParticleFly {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .screen-shake {
+            animation: intenseShake 2.5s ease-out;
+        }
+
+        @keyframes intenseShake {
+            0% { transform: translate(0, 0) scale(1); }
+            10% { transform: translate(-40px, -30px) scale(1.02); }
+            20% { transform: translate(35px, 25px) scale(1.01); }
+            30% { transform: translate(-30px, 35px) scale(1.03); }
+            40% { transform: translate(40px, -25px) scale(1.02); }
+            50% { transform: translate(-35px, 30px) scale(1.04); }
+            60% { transform: translate(30px, -35px) scale(1.01); }
+            70% { transform: translate(-40px, 25px) scale(1.03); }
+            80% { transform: translate(35px, 35px) scale(1.02); }
+            90% { transform: translate(-30px, -30px) scale(1.01); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        /* Bird vaporization */
+        .mascot.exploding {
+            animation: instantVaporize 0.8s ease-out forwards !important;
+            pointer-events: none;
+        }
+
+        @keyframes instantVaporize {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+                filter: brightness(1) blur(0);
+            }
+            30% {
+                transform: scale(2.5);
+                opacity: 0.7;
+                filter: brightness(4) blur(8px);
+            }
+            60% {
+                transform: scale(4);
+                opacity: 0.3;
+                filter: brightness(8) blur(15px);
+            }
+            100% {
+                transform: scale(6);
+                opacity: 0;
+                filter: brightness(12) blur(25px);
+            }
+        }
+
+        /* Keep all your original beautiful styles below */
         .floating-elements {
             position: fixed;
             top: 0;
@@ -329,6 +526,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            transition: all 0.1s ease;
         }
 
         .mascot-beak {
@@ -476,6 +674,13 @@
     </style>
 </head>
 <body>
+    <!-- Nuclear Explosion Container -->
+    <div class="nuclear-explosion" id="nuclearExplosion">
+        <div class="fireball"></div>
+        <div class="shockwave"></div>
+        <div class="explosion-particles" id="explosionParticles"></div>
+    </div>
+
     <!-- Floating educational elements -->
     <div class="floating-elements" id="floatingElements"></div>
 
@@ -544,6 +749,125 @@
     </div>
 
     <script>
+        // MASSIVE FIREBALL EXPLOSION FUNCTIONS
+        function createNuclearExplosion() {
+            const explosion = document.getElementById('nuclearExplosion');
+            
+            // Show explosion
+            explosion.style.display = 'block';
+            
+            // INTENSE SCREEN SHAKE
+            document.body.classList.add('screen-shake');
+            setTimeout(() => document.body.classList.remove('screen-shake'), 2500);
+            
+            // Create massive fire particles
+            createMassiveFireParticles();
+            
+            // Play massive explosion sound
+            playNuclearSound();
+            
+            // Hide explosion after it's done
+            setTimeout(() => {
+                explosion.style.display = 'none';
+                resetExplosionElements();
+            }, 3000);
+        }
+
+        function createMassiveFireParticles() {
+            const particlesContainer = document.getElementById('explosionParticles');
+            
+            // Create 300 fire particles
+            for (let i = 0; i < 300; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.classList.add('explosion-particle');
+                    
+                    // Random size - bigger particles
+                    const size = Math.random() * 60 + 20;
+                    particle.style.width = `${size}px`;
+                    particle.style.height = `${size}px`;
+                    
+                    // Start from center
+                    particle.style.left = '50%';
+                    particle.style.top = '50%';
+                    
+                    // MASSIVE flying distances
+                    const tx = (Math.random() - 0.5) * window.innerWidth * 6;
+                    const ty = (Math.random() - 0.5) * window.innerHeight * 6;
+                    particle.style.setProperty('--tx', `${tx}px`);
+                    particle.style.setProperty('--ty', `${ty}px`);
+                    
+                    // Intense fire colors with random selection
+                    const colors = [
+                        'radial-gradient(circle, #ffff00, #ff6b00, #ff0000)',
+                        'radial-gradient(circle, #ffd700, #ff4500, #8b0000)',
+                        'radial-gradient(circle, #ffffff, #ffa500, #ff0000)',
+                        'radial-gradient(circle, #ffff00, #ff0000, #8b0000)',
+                        'radial-gradient(circle, #ff6b00, #ff0000, #8b0000)'
+                    ];
+                    particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    
+                    particlesContainer.appendChild(particle);
+                    
+                    // Remove particle after animation
+                    setTimeout(() => {
+                        if (particle.parentNode) {
+                            particle.parentNode.removeChild(particle);
+                        }
+                    }, 2000);
+                }, i * 5); // Faster creation for more intense effect
+            }
+        }
+
+        function playNuclearSound() {
+            try {
+                // Multiple explosion sounds for massive effect
+                const sound1 = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-explosion-in-the-air-2801.mp3');
+                const sound2 = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-bomb-explosion-in-the-air-2800.mp3');
+                
+                sound1.volume = 0.8;
+                sound2.volume = 0.6;
+                
+                sound1.play();
+                setTimeout(() => sound2.play(), 300);
+                
+            } catch (e) {
+                console.log('No explosion sounds available');
+            }
+        }
+
+        function resetExplosionElements() {
+            const particlesContainer = document.getElementById('explosionParticles');
+            particlesContainer.innerHTML = '';
+        }
+
+        // Respawn the bird after explosion
+        function respawnBird() {
+            setTimeout(() => {
+                const mascot = document.getElementById('mascot');
+                mascot.classList.remove('exploding');
+                mascot.style.opacity = '1';
+                mascot.style.transform = 'scale(1)';
+                mascot.style.filter = 'none';
+                mascot.style.pointerEvents = 'auto';
+            }, 3000);
+        }
+
+        // Bird nuclear explosion when clicked
+        document.getElementById('mascot').addEventListener('click', function(e) {
+            const mascot = this;
+            
+            // Add exploding class to bird - make it vaporize instantly
+            mascot.classList.add('exploding');
+            
+            // Create MASSIVE FIREBALL explosion
+            createNuclearExplosion();
+            
+            // Respawn bird after explosion
+            respawnBird();
+        });
+
+        // ORIGINAL WEBSITE FUNCTIONS (KEEP WORKING)
         // Create floating educational elements
         function createFloatingElements() {
             const container = document.getElementById('floatingElements');
@@ -613,7 +937,7 @@
             }, 300);
         }
 
-        // Make mascot eyes follow mouse
+        // Make mascot eyes follow mouse - FIXED VERSION
         document.addEventListener('mousemove', (e) => {
             const mascot = document.getElementById('mascot');
             const pupils = document.querySelectorAll('.mascot-pupil');
@@ -640,29 +964,47 @@
             });
         });
 
-        // Music toggle functionality
+        // Music toggle functionality - FIXED VERSION
         let musicPlaying = false;
         const musicToggle = document.getElementById('musicToggle');
         const musicIcon = document.getElementById('musicIcon');
         
-        // Create audio element (you would need to add an actual audio file)
+        // Create audio element
         const backgroundMusic = new Audio();
         backgroundMusic.loop = true;
-        // Uncomment and set the path to your music file
-        // backgroundMusic.src = 'path/to/your/music.mp3';
+        backgroundMusic.src = "music.mp3";
         
+        // Add error handling for audio
+        backgroundMusic.addEventListener('error', function(e) {
+            console.error('Error loading audio file:', e);
+        });
+
         musicToggle.addEventListener('click', () => {
             musicPlaying = !musicPlaying;
             
             if (musicPlaying) {
-                // backgroundMusic.play();
+                // Play music and handle promise
+                backgroundMusic.play().catch(error => {
+                    console.error('Error playing audio:', error);
+                    musicPlaying = false; // Reset state if play fails
+                });
                 musicIcon.classList.remove('fa-music');
-                musicIcon.classList.add('fa-volume-mute');
+                musicIcon.classList.add('fa-volume-up');
             } else {
-                // backgroundMusic.pause();
-                musicIcon.classList.remove('fa-volume-mute');
+                backgroundMusic.pause();
+                musicIcon.classList.remove('fa-volume-up');
                 musicIcon.classList.add('fa-music');
             }
+        });
+
+        // Fix button click events to prevent navigation when clicking the button itself
+        document.querySelectorAll('.explore-btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent the card click event from firing
+                const card = this.closest('.class-card');
+                const page = card.getAttribute('onclick').match(/'([^']+)'/)[1];
+                navigateToClass(page);
+            });
         });
 
         // Initialize the page
