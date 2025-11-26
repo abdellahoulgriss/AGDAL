@@ -960,13 +960,13 @@
 
     <!-- Theme Controls -->
     <div class="theme-controls">
-        <button class="theme-btn day-night-toggle" id="dayNightToggle" title="Toggle Day/Night Mode">
+        <button class="theme-btn day-night-toggle" id="dayNightToggle" title="تبديل وضع النهار/الليل">
             <i class="fas fa-moon"></i>
         </button>
-        <button class="theme-btn season-btn" id="seasonBtn" title="Change Season">
+        <button class="theme-btn season-btn" id="seasonBtn" title="تغيير الموسم">
             <i class="fas fa-tree"></i>
         </button>
-        <button class="theme-btn color-storm-btn" id="colorStormBtn" title="Trigger Color Storm">
+        <button class="theme-btn color-storm-btn" id="colorStormBtn" title="إطلاق فقاعات الألوان">
             <i class="fas fa-rainbow"></i>
         </button>
     </div>
@@ -1667,34 +1667,30 @@
     </div>
 
     <!-- Treasure Modal -->
-    <div class="treasure-modal" id="treasureModal">
-        <div class="treasure-content">
-            <h2>كنز الصف السادس! 🏆</h2>
-            <p>تهانينا! لقد عثرت على كنزنا السري!</p>
-            <p>هنا بعض الأسرار المذهلة عن صفنا:</p>
-            <ul style="text-align: right; margin: 1rem 0;">
-                <li>أفضل فريق في الرياضيات في المدرسة</li>
-                <li>فزنا ببطولة المدرسة في كرة السلة</li>
-                <li>أكبر عدد من المشاريع المبتكرة هذا العام</li>
-                <li>أكثر صف مرحًا وودًا في المدرسة</li>
-            </ul>
-            <button class="close-treasure" id="closeTreasure">إغلاق الكنز</button>
-        </div>
+<div class="treasure-modal" id="treasureModal">
+    <div class="treasure-content">
+        <h2>كنز الصف السادس! 🏆</h2>
+        <p>تهانينا! لقد عثرت على كنزنا السري!</p>
+        <p>هنا بعض الأسرار المذهلة عن صفنا:</p>
+        <ul style="text-align: right; margin: 1rem 0;">
+            <li>أكثر صف مرحًا وودًا في المدرسة</li>
+        </ul>
+        <p style="margin: 1rem 0; font-weight: bold;">🎮 جرب لعبة الديناصور! 🦖 مع إضافتي 🐱‍👤</p>
+        <button class="close-treasure" id="closeTreasure" onclick="window.open('Dino-Game.html', '_blank')">العب لعبة الديناصور</button>
     </div>
-
+</div>
     <!-- Magic Portal Modal -->
     <div class="portal-modal" id="portalModal">
         <div class="portal-content">
-            <h2>بوابة السحر السري! 🌟</h2>
-            <p>مرحباً في البوابة السحرية للصف السادس!</p>
-            <p>هنا يمكنك استكشاف عوالم جديدة من المعرفة:</p>
+            <h2>بوابة الساحر! 🌟</h2>
+            <p>مرحباً في بوابة الساحر للصف السادس!</p>
+            <p>هنا يمكنك استكشاف عوالم جديدة :</p>
             <ul style="text-align: right; margin: 1rem 0;">
-                <li>مختبر العلوم السري</li>
-                <li>مكتبة الكنوز المفقودة</li>
-                <li>استوديو الفن الإبداعي</li>
-                <li>مركز التكنولوجيا المتقدمة</li>
+                <li>انضم إلى الساحر في مغامرة ساحرة! اقفز،
+                     اندفع، وجمع الكرات السحرية للبقاء!</li>
+
             </ul>
-            <button class="close-portal" id="closePortal">الخروج من البوابة</button>
+             <button class="close-portal" id="closePortal" onclick="window.open('Magic.html', '_blank')">دخول البوابة</button>
         </div>
     </div>
 
@@ -1727,6 +1723,7 @@
         let musicPlaying = false;
         let secretKeyPressed = {};
         const secretCode = ['s', 'e', 'c', 'r', 'e', 't']; // Secret handshake code
+        let currentAudio = null; // Track currently playing audio
 
         // Generate snowflakes
         function createSnow() {
@@ -2017,10 +2014,16 @@
 
         // Play instrument sound for student card
         function playInstrumentSound(card) {
+            // Stop any currently playing audio
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+            
             const soundFile = card.getAttribute('data-sound');
             if (soundFile) {
-                const audio = new Audio(soundFile);
-                audio.play().catch(e => {
+                currentAudio = new Audio(soundFile);
+                currentAudio.play().catch(e => {
                     console.log("Audio play failed:", e);
                     // If the specific sound file doesn't exist, play a fallback sound
                     const fallbackAudio = new Audio('fallback.mp3');
