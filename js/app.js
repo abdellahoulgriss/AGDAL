@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function initFloatingElements() { }
 
 function initConfetti() {
+    if (window.innerWidth < 768) return; // Disable on mobile
     createConfetti(80);
 }
 
@@ -74,13 +75,40 @@ function initNavigation() {
 function initTimeTravelToggle() {
     const toggleBtn = document.getElementById('timeTravelToggleBtn');
     const buttonsContainer = document.getElementById('timeTravelButtons');
+    let isTimeTravelLoaded = false;
+
     if (toggleBtn && buttonsContainer) {
         toggleBtn.addEventListener('click', () => {
-            const isHidden = buttonsContainer.style.display === 'none';
-            buttonsContainer.style.display = isHidden ? 'flex' : 'none';
-            const icon = toggleBtn.querySelector('i');
-            if (icon) {
-                icon.className = isHidden ? 'fas fa-times' : 'fas fa-clock';
+            if (!isTimeTravelLoaded) {
+                showNotification('جاري تحميل آلة الزمن... ⏳', 'info');
+
+                // Load CSS
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'css/time-travel.css?v=3';
+                document.head.appendChild(link);
+
+                // Load JS
+                const script = document.createElement('script');
+                script.src = 'js/time-travel.js?v=3';
+                script.onload = () => {
+                    isTimeTravelLoaded = true;
+                    const isHidden = buttonsContainer.style.display === 'none';
+                    buttonsContainer.style.display = isHidden ? 'flex' : 'none';
+                    const icon = toggleBtn.querySelector('i');
+                    if (icon) {
+                        icon.className = isHidden ? 'fas fa-times' : 'fas fa-clock';
+                    }
+                    showNotification('آلة الزمن جاهزة! 🕒', 'success');
+                };
+                document.body.appendChild(script);
+            } else {
+                const isHidden = buttonsContainer.style.display === 'none';
+                buttonsContainer.style.display = isHidden ? 'flex' : 'none';
+                const icon = toggleBtn.querySelector('i');
+                if (icon) {
+                    icon.className = isHidden ? 'fas fa-times' : 'fas fa-clock';
+                }
             }
         });
     }

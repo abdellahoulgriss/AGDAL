@@ -37,7 +37,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/main.css?v=3">
     <link rel="stylesheet" href="css/animations.css?v=3">
-    <link rel="stylesheet" href="css/time-travel.css?v=3">
+    <!-- time-travel.css lazy loaded in app.js -->
     <link rel="stylesheet" href="css/games.css?v=3">
     <link rel="stylesheet" href="css/library.css?v=3">
 
@@ -88,12 +88,6 @@
         <button class="time-btn present-btn active" onclick="returnToPresent()"> <i class="fas fa-calendar-day"></i>
             <span>الحاضر</span> </button> <button class="time-btn future-btn" onclick="travelToFuture()"> <i
                 class="fas fa-rocket"></i> <span>المستقبل 2050</span> </button>
-    </div>
-    <div class="nuclear-explosion" id="nuclearExplosion">
-        <div class="fireball"></div>
-        <div class="shockwave"></div>
-        <div class="mushroom-cloud"></div>
-        <div class="explosion-particles" id="explosionParticles"></div>
     </div>
     <div class="floating-elements" id="floatingElements"></div>
     <div class="confetti-container" id="confettiContainer"></div>
@@ -405,7 +399,7 @@
         </div>
     </footer>
     <script src="js/data.js?v=3"></script>
-    <script src="js/time-travel.js?v=3"></script>
+    <!-- time-travel.js lazy loaded in app.js -->
     <script src="js/animations.js?v=3"></script>
     <script src="js/games.js?v=3"></script>
     <script src="js/app.js?v=3"></script>
