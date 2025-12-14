@@ -70,7 +70,7 @@
     </script>
 </head>
 
-<body>
+<body class="dark-mode">
     <nav class="main-nav" id="mainNav">
         <div class="nav-brand"> <span class="brand-icon">🎓</span> <span class="brand-text">مدرسة أكدال</span> </div>
         <div class="nav-links"> <a href="#home" class="nav-link active"><i class="fas fa-home"></i> الرئيسية</a> <a
@@ -125,11 +125,7 @@
                             class="stat-label">لعبة تعليمية</span> </div>
                 </div>
             </div>
-            <div class="hero-mascot">
-                <div class="mascot-container" id="heroMascot">
-                    <div class="mascot-bubble">اضغط عليّ! 🎉</div>
-                </div>
-            </div>
+
         </section>
         <section class="classes-section" id="classes">
             <div class="section-header">
@@ -137,7 +133,7 @@
                 <p class="section-subtitle">انضم إلى فريقك وابدأ المغامرة</p>
             </div>
             <div class="classes-container">
-                <div class="class-card innovators grade-6" onclick="navigateToClass('class1.html')">
+                <div class="class-card innovators grade-6 future-card-purple" onclick="navigateToClass('class1.html')">
                     <div class="grade-badge star-6"> <i class="fas fa-star"></i> <span>6</span> </div>
                     <div class="card-decoration">
                         <div class="orbit">
@@ -159,7 +155,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="class-card creators grade-6" onclick="navigateToClass('class2.html')">
+                <div class="class-card creators grade-6 future-card-red" onclick="navigateToClass('class2.html')">
                     <div class="grade-badge star-6"> <i class="fas fa-star"></i> <span>6</span> </div>
                     <div class="card-decoration">
                         <div class="brush-strokes"> <span></span><span></span><span></span> </div>
@@ -179,7 +175,7 @@
                             <span>استكشف الفصل</span> <i class="fas fa-arrow-left"></i> </button>
                     </div>
                 </div>
-                <div class="class-card explorers grade-5" onclick="navigateToClass('class3.html')">
+                <div class="class-card explorers grade-5 future-card-yellow" onclick="navigateToClass('class3.html')">
                     <div class="grade-badge star-5"> <i class="fas fa-star"></i> <span>5</span> </div>
                     <div class="card-decoration">
                         <div class="compass-spin"> <i class="far fa-compass"></i> </div>
@@ -198,7 +194,7 @@
                             <span>استكشف الفصل</span> <i class="fas fa-arrow-left"></i> </button>
                     </div>
                 </div>
-                <div class="class-card heroes grade-5" onclick="navigateToClass('class4.html')">
+                <div class="class-card heroes grade-5 future-card-blue" onclick="navigateToClass('class4.html')">
                     <div class="grade-badge star-5"> <i class="fas fa-star"></i> <span>5</span> </div>
                     <div class="card-decoration">
                         <div class="stars-sparkle"> <span>✨</span><span>✨</span><span>✨</span> </div>
@@ -343,34 +339,8 @@
                         المكتبة 📚 </a> </div>
             </section>
     </main>
-    <div class="owl-mascot" id="owlMascot">
-        <div class="owl-body">
-            <div class="owl-face">
-                <div class="owl-eyes">
-                    <div class="owl-eye left">
-                        <div class="owl-pupil"></div>
-                    </div>
-                    <div class="owl-eye right">
-                        <div class="owl-pupil"></div>
-                    </div>
-                </div>
-                <div class="owl-beak"></div>
-            </div>
-            <div class="owl-wings">
-                <div class="owl-wing left"></div>
-                <div class="owl-wing right"></div>
-            </div>
-            <div class="owl-feet">
-                <div class="owl-foot"></div>
-                <div class="owl-foot"></div>
-            </div>
-        </div>
-        <div class="owl-speech-bubble" id="owlSpeech">
-            <p>مرحباً! اضغط علي لمفاجأة! 💥</p>
-        </div>
-    </div>
-    <div class="theme-toggle" id="themeToggle" title="تبديل الوضع الليلي"> <i class="fas fa-moon" id="themeIcon"></i>
-    </div>
+
+
     <div class="modal game-modal" id="gameModal">
         <div class="modal-content game-content"> <button class="modal-close" onclick="closeGameModal()"> <i
                     class="fas fa-times"></i> </button>
