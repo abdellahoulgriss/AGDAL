@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     initFloatingElements();
-    initConfetti();
+    initFloatingElements();
+    // initConfetti(); // Removed for performance
+    initNavigation();
     initNavigation();
     initTimeTravelToggle();
     initLibrary();
@@ -15,17 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
             unlockAchievement('first_login');
         }, 2000);
     }
-    setTimeout(() => {
-        showNotification('مرحباً بك في مدرسة أكدال! 🎓', 'info', 4000);
-    }, 1500);
 });
 
 function initFloatingElements() { }
 
-function initConfetti() {
-    if (window.innerWidth < 768) return; // Disable on mobile
-    createConfetti(80);
-}
+// Confetti removed for performance
+
 
 function initNavigation() {
     const nav = document.getElementById('mainNav');
