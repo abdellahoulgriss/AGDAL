@@ -164,7 +164,7 @@ function renderLibrary(category = 'all') {
         40: 'lessons/lesson-40-computer.html'
     };
     const items = category === 'all' ? SiteData.library : SiteData.library.filter(item => item.category === category);
-    grid.innerHTML = items.map(item => ` <a href="${lessonUrls[item.id] || '#'}" class="library-card" style="text-decoration: none; color: inherit;"> <div class="library-card-image" style="background: ${getCategoryColor(item.category)}; height: 400px;"> ${item.image ? `<img src="${item.image}" alt="${item.title}" style="width: 100%; height: 100%; object-fit: cover;">` : item.icon} </div> <div class="library-card-content"> <span class="library-card-category">${getCategoryName(item.category)}</span> <h3 class="library-card-title">${item.title}</h3> <p class="library-card-description">${item.description}</p> <div class="library-card-meta"> <span>⏱️ ${item.duration}</span> <span>⭐ +${item.points} نقطة</span> </div> </div> </a> `).join('');
+    grid.innerHTML = items.map(item => ` <a href="${lessonUrls[item.id] || '#'}" class="library-card" style="text-decoration: none; color: inherit;"> <div class="library-card-image" style="background: ${getCategoryColor(item.category)}; height: 400px;"> ${item.image ? `<img src="${item.image}" alt="${item.title}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">` : item.icon} </div> <div class="library-card-content"> <span class="library-card-category">${getCategoryName(item.category)}</span> <h3 class="library-card-title">${item.title}</h3> <p class="library-card-description">${item.description}</p> <div class="library-card-meta"> <span>⏱️ ${item.duration}</span> <span>⭐ +${item.points} نقطة</span> </div> </div> </a> `).join('');
 }
 
 function initCategoryFilters() {
