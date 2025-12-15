@@ -239,8 +239,8 @@ function joinCompetition() {
     unlockAchievement('first_competition');
 }
 
-function navigateToClass(page) {
-    createClickEffect(event.clientX, event.clientY);
+function navigateToClass(page, event) {
+    if (event) createClickEffect(event.clientX, event.clientY);
     setTimeout(() => {
         window.location.href = page;
     }, 300);
