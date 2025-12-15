@@ -1,8 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     initFloatingElements();
-    initFloatingElements();
     // initConfetti(); // Removed for performance
-    initNavigation();
     initNavigation();
     initTimeTravelToggle();
     initLibrary();
