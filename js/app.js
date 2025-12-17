@@ -4,17 +4,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initTimeTravelToggle();
     initLibrary();
-    initCounters();
+    // initCounters(); // Removed per user request
     renderGames();
     PointsSystem.loadPoints();
     AchievementsSystem.load();
     AchievementsSystem.render();
-    if (!localStorage.getItem('firstLogin')) {
-        localStorage.setItem('firstLogin', 'true');
-        setTimeout(() => {
-            unlockAchievement('first_login');
-        }, 2000);
-    }
+    // First login achievement removed per user request
 });
 
 function initFloatingElements() { }
