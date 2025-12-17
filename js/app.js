@@ -25,20 +25,29 @@ function initFloatingElements() { }
 function initNavigation() {
     const nav = document.getElementById('mainNav');
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    window.addEventListener('scroll', () => {
-        const navLinks = document.querySelector('.nav-links');
-        const isMenuOpen = navLinks.classList.contains('mobile-open');
+    const navLinks = document.querySelector('.nav-links');
 
-        if (window.scrollY > 50) {
-            nav.classList.add('scrolled');
-            if (!isMenuOpen) {
-                nav.classList.add('hidden-nav');
-            }
-        } else {
-            nav.classList.remove('scrolled');
-            nav.classList.remove('hidden-nav');
+    let isScrolling = false;
+
+    window.addEventListener('scroll', () => {
+        if (!isScrolling) {
+            window.requestAnimationFrame(() => {
+                const isMenuOpen = navLinks.classList.contains('mobile-open');
+                if (window.scrollY > 50) {
+                    nav.classList.add('scrolled');
+                    if (!isMenuOpen) {
+                        nav.classList.add('hidden-nav');
+                    }
+                } else {
+                    nav.classList.remove('scrolled');
+                    nav.classList.remove('hidden-nav');
+                }
+                isScrolling = false;
+            });
+            isScrolling = true;
         }
     });
+
     if (mobileMenuBtn) {
         mobileMenuBtn.addEventListener('click', () => {
             const navLinks = document.querySelector('.nav-links');
