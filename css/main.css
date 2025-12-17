@@ -296,6 +296,7 @@ body {
 }
 
 .hero-title {
+    font-size: 2em;
     margin-bottom: var(--spacing-lg);
 }
 
