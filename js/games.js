@@ -1,1 +1,1740 @@
-const PointsSystem = {    currentPoints: 0,    addPoints(amount, x, y) {        this.currentPoints += amount;        this.updateDisplay();        if (x && y) {            showFlyingPoints(x, y, amount);        }        localStorage.setItem('studentPoints', this.currentPoints);        this.checkAchievements();    },    updateDisplay() {        const display = document.getElementById('totalPoints');        if (display) {            display.textContent = this.currentPoints;            display.classList.add('points-animation');            setTimeout(() => display.classList.remove('points-animation'), 500);        }    },    loadPoints() {        const saved = localStorage.getItem('studentPoints');        this.currentPoints = saved ? parseInt(saved) : 0;        this.updateDisplay();    },    checkAchievements() {        if (this.currentPoints >= 100) {            unlockAchievement('hundred_points');        }    }};const AchievementsSystem = {    achievements: [],    load() {        const saved = localStorage.getItem('achievements');        this.achievements = saved ? JSON.parse(saved) : [...SiteData.achievements];    },    unlock(id) {        const achievement = this.achievements.find(a => a.id === id);        if (achievement && !achievement.unlocked) {            achievement.unlocked = true;            localStorage.setItem('achievements', JSON.stringify(this.achievements));            showNotification(`🏆 إنجاز جديد: ${achievement.title}!`, 'success');            if (achievement.points > 0) {                PointsSystem.addPoints(achievement.points);            }            if (typeof createConfetti === 'function') {                createConfetti(50);            }        }    },    render() {        const grid = document.getElementById('achievementsGrid');        if (!grid) return;        grid.innerHTML = this.achievements.map(a => `            <div class="achievement-card ${a.unlocked ? 'unlocked' : 'locked'}">                <div class="achievement-icon">${a.icon}</div>                <h4>${a.title}</h4>                <p>${a.description}</p>                ${a.points > 0 ? `<span class="achievement-points">+${a.points} نقطة</span>` : ''}            </div>        `).join('');    }};function unlockAchievement(id) {    AchievementsSystem.unlock(id);}class MathRaceGame {    constructor(container) {        this.container = container;        this.score = 0;        this.level = 1;        this.timeLeft = 60;        this.questionsAnswered = 0;        this.correctAnswers = 0;        this.isPlaying = false;        this.timer = null;    }    start() {        this.score = 0;        this.level = 1;        this.timeLeft = 60;        this.questionsAnswered = 0;        this.correctAnswers = 0;        this.isPlaying = true;        this.render();        this.startTimer();        this.generateQuestion();        this.playSound('start');    }    render() {        this.container.innerHTML = `            <div class="game-header">                <h2>🏎️ سباق الأرقام</h2>                <div class="game-stats">                    <span class="score">⭐ النقاط: <b id="gameScore">${this.score}</b></span>                    <span class="level">📊 المستوى: <b id="gameLevel">${this.level}</b></span>                    <span class="timer">⏱️ الوقت: <b id="gameTimer">${this.timeLeft}</b>ث</span>                </div>            </div>            <div class="game-content" id="gameContent"></div>            <div class="game-answer">                <input type="number" id="answerInput" placeholder="أدخل الإجابة" autofocus>                <button id="submitAnswer" class="game-btn">✓ تأكيد</button>            </div>            <div class="game-progress">                <div class="progress-bar">                    <div class="progress-fill" id="progressFill" style="width: 100%"></div>                </div>            </div>        `;        document.getElementById('submitAnswer').addEventListener('click', () => this.checkAnswer());        document.getElementById('answerInput').addEventListener('keypress', (e) => {            if (e.key === 'Enter') this.checkAnswer();        });    }    generateQuestion() {        if (!this.isPlaying) return;        const operations = this.level >= 3 ? ['+', '-', '×', '÷'] :            this.level >= 2 ? ['+', '-', '×'] : ['+', '-'];        const op = operations[Math.floor(Math.random() * operations.length)];        let num1, num2;        const maxNum = 10 + (this.level * 8);        if (op === '÷') {            num2 = Math.floor(Math.random() * 10) + 2;            num1 = num2 * (Math.floor(Math.random() * 10) + 1);        } else if (op === '×') {            num1 = Math.floor(Math.random() * (maxNum / 2)) + 1;            num2 = Math.floor(Math.random() * 12) + 1;        } else {            num1 = Math.floor(Math.random() * maxNum) + 1;            num2 = Math.floor(Math.random() * maxNum) + 1;        }        if (op === '-' && num2 > num1) {            [num1, num2] = [num2, num1];        }        this.currentQuestion = { num1, num2, op };        switch (op) {            case '+': this.correctAnswer = num1 + num2; break;            case '-': this.correctAnswer = num1 - num2; break;            case '×': this.correctAnswer = num1 * num2; break;            case '÷': this.correctAnswer = num1 / num2; break;        }        const gameContent = document.getElementById('gameContent');        gameContent.innerHTML = `            <div class="question-display">                <div class="question-numbers">                    <span class="num num1">${num1}</span>                    <span class="operation">${op}</span>                    <span class="num num2">${num2}</span>                    <span class="equals">=</span>                    <span class="answer-box">?</span>                </div>            </div>        `;        document.getElementById('answerInput').value = '';        document.getElementById('answerInput').focus();    }    checkAnswer() {        const input = document.getElementById('answerInput');        const answer = parseFloat(input.value);        const gameContent = document.getElementById('gameContent');        this.questionsAnswered++;        if (answer === this.correctAnswer) {            this.correctAnswers++;            const points = 10 * this.level + (this.level > 2 ? 5 : 0);            this.score += points;            document.getElementById('gameScore').textContent = this.score;            gameContent.classList.add('correct-animation');            setTimeout(() => gameContent.classList.remove('correct-animation'), 500);            if (this.correctAnswers % 5 === 0) {                this.level++;                document.getElementById('gameLevel').textContent = this.level;                this.showLevelUp();            }            this.playSound('correct');            this.generateQuestion();        } else {            gameContent.classList.add('wrong-animation');            setTimeout(() => gameContent.classList.remove('wrong-animation'), 500);            this.playSound('wrong');                        const answerBox = gameContent.querySelector('.answer-box');            if (answerBox) {                answerBox.textContent = this.correctAnswer;                answerBox.style.color = '#00ff88';            }            setTimeout(() => this.generateQuestion(), 1500);        }    }    showLevelUp() {        const popup = document.createElement('div');        popup.className = 'level-up-popup';        popup.innerHTML = `<span>🎉 المستوى ${this.level}!</span>`;        popup.style.cssText = `            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);            background: linear-gradient(135deg, #ffd700, #ff9a00);            color: #1a1a2e; padding: 20px 40px; border-radius: 20px;            font-size: 2rem; font-weight: bold; z-index: 10000;            animation: levelUpAnim 1s ease-out forwards;        `;        document.body.appendChild(popup);        setTimeout(() => popup.remove(), 1000);        if (typeof showNotification === 'function') {            showNotification(`🎉 ارتقيت للمستوى ${this.level}!`, 'success');        }    }    startTimer() {        const progressFill = document.getElementById('progressFill');        const timerDisplay = document.getElementById('gameTimer');        const totalTime = this.timeLeft;        this.timer = setInterval(() => {            this.timeLeft--;            timerDisplay.textContent = this.timeLeft;            const percentage = (this.timeLeft / totalTime) * 100;            if (progressFill) {                progressFill.style.width = `${percentage}%`;                if (this.timeLeft <= 10) {                    progressFill.style.background = '#ff4444';                }            }            if (this.timeLeft <= 0) {                this.endGame();            }        }, 1000);    }    playSound(type) {        try {            const ctx = new (window.AudioContext || window.webkitAudioContext)();            const osc = ctx.createOscillator();            const gain = ctx.createGain();            osc.connect(gain);            gain.connect(ctx.destination);            if (type === 'correct') {                osc.frequency.setValueAtTime(523.25, ctx.currentTime);                osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);                osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2);            } else if (type === 'wrong') {                osc.frequency.setValueAtTime(200, ctx.currentTime);                osc.frequency.setValueAtTime(150, ctx.currentTime + 0.15);            } else if (type === 'start') {                osc.frequency.setValueAtTime(440, ctx.currentTime);                osc.frequency.setValueAtTime(550, ctx.currentTime + 0.1);                osc.frequency.setValueAtTime(660, ctx.currentTime + 0.2);            }            gain.gain.setValueAtTime(0.3, ctx.currentTime);            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);            osc.start(ctx.currentTime);            osc.stop(ctx.currentTime + 0.3);        } catch (e) { }    }    endGame() {        this.isPlaying = false;        clearInterval(this.timer);        this.playSound('correct');        const accuracy = this.questionsAnswered > 0 ?            Math.round((this.correctAnswers / this.questionsAnswered) * 100) : 0;        const stars = this.score >= 100 ? 3 : this.score >= 50 ? 2 : 1;        this.container.innerHTML = `            <div class="game-over">                <h2>🏁 انتهت اللعبة!</h2>                <div class="stars-display">                    ${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}                </div>                <div class="final-score">                    <p>مجموع نقاطك: <span class="big-score">${this.score}</span></p>                    <p>المستوى: ${this.level} | الدقة: ${accuracy}%</p>                    <p>الإجابات الصحيحة: ${this.correctAnswers} من ${this.questionsAnswered}</p>                </div>                <div class="game-over-buttons">                    <button class="game-btn play-again" onclick="startGame('math-race')">🔄 العب مرة أخرى</button>                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>                </div>            </div>        `;        PointsSystem.addPoints(this.score);        unlockAchievement('first_game');        if (this.score >= 100) {            unlockAchievement('perfect_score');        }    }}class WordHunterGame {    constructor(container) {        this.container = container;        this.score = 0;        this.timeLeft = 60;        this.wordsFound = 0;        this.currentWordIndex = 0;        this.words = [            { word: 'مدرسة', hint: 'مكان التعلم', difficulty: 1 },            { word: 'كتاب', hint: 'نقرأ فيه', difficulty: 1 },            { word: 'قلم', hint: 'نكتب به', difficulty: 1 },            { word: 'معلم', hint: 'يعلمنا العلوم', difficulty: 1 },            { word: 'صديق', hint: 'رفيق الدرب', difficulty: 1 },            { word: 'فصل', hint: 'غرفة الدراسة', difficulty: 1 },            { word: 'ورقة', hint: 'نكتب عليها', difficulty: 1 },            { word: 'حقيبة', hint: 'نحمل فيها الكتب', difficulty: 2 },            { word: 'مسطرة', hint: 'نرسم بها خطوطاً مستقيمة', difficulty: 2 },            { word: 'ممحاة', hint: 'نمسح بها الأخطاء', difficulty: 2 },            { word: 'طاولة', hint: 'نجلس حولها', difficulty: 2 },            { word: 'سبورة', hint: 'يكتب عليها المعلم', difficulty: 2 },            { word: 'واجب', hint: 'نكتبه في البيت', difficulty: 2 },            { word: 'امتحان', hint: 'نختبر فيه معلوماتنا', difficulty: 3 },            { word: 'مختبر', hint: 'نجري فيه التجارب', difficulty: 3 },            { word: 'مكتبة', hint: 'فيها الكثير من الكتب', difficulty: 3 }        ];        this.currentWord = null;        this.selectedLetters = [];        this.timer = null;    }    start() {        this.score = 0;        this.timeLeft = 60;        this.wordsFound = 0;        this.selectedLetters = [];        this.shuffleWords();        this.currentWordIndex = 0;        this.render();        this.startTimer();        this.nextWord();    }    shuffleWords() {        this.words = this.words.sort(() => Math.random() - 0.5);    }    render() {        this.container.innerHTML = `            <div class="game-header">                <h2>🎯 صائد الكلمات</h2>                <div class="game-stats">                    <span class="score">⭐ النقاط: <b id="gameScore">${this.score}</b></span>                    <span class="words">📝 الكلمات: <b id="wordsFound">${this.wordsFound}</b></span>                    <span class="timer">⏱️ الوقت: <b id="gameTimer">${this.timeLeft}</b>ث</span>                </div>            </div>            <div class="game-content" id="gameContent"></div>        `;    }    nextWord() {        if (this.timeLeft <= 0 || this.currentWordIndex >= this.words.length) {            this.endGame();            return;        }        this.currentWord = this.words[this.currentWordIndex];        this.selectedLetters = [];        const shuffled = this.shuffleWord(this.currentWord.word);        document.getElementById('gameContent').innerHTML = `            <div class="word-puzzle">                <div class="hint-box">                    <span class="hint-icon">💡</span>                    <span class="hint-text">${this.currentWord.hint}</span>                    <span class="difficulty">${'⭐'.repeat(this.currentWord.difficulty)}</span>                </div>                <div class="shuffled-letters" id="shuffledLetters">                    ${shuffled.split('').map((letter, i) => `                        <button class="letter-box" data-index="${i}" data-letter="${letter}" onclick="currentGame.selectLetter(this)">                            ${letter}                        </button>                    `).join('')}                </div>                <div class="answer-display" id="answerDisplay">                    ${this.currentWord.word.split('').map(() => '<span class="letter-slot"></span>').join('')}                </div>                <div class="word-actions">                    <button class="game-btn check-btn" onclick="currentGame.checkWord()">✓ تحقق</button>                    <button class="game-btn clear-btn" onclick="currentGame.clearSelection()">🔄 مسح</button>                    <button class="game-btn skip-btn" onclick="currentGame.skipWord()">⏭️ تخطي</button>                </div>            </div>        `;    }    shuffleWord(word) {        let shuffled = word.split('').sort(() => Math.random() - 0.5).join('');                while (shuffled === word && word.length > 2) {            shuffled = word.split('').sort(() => Math.random() - 0.5).join('');        }        return shuffled;    }    selectLetter(element) {        if (element.classList.contains('selected')) return;        if (this.selectedLetters.length >= this.currentWord.word.length) return;        element.classList.add('selected');        this.selectedLetters.push(element.dataset.letter);        this.updateAnswerDisplay();        this.playClickSound();    }    updateAnswerDisplay() {        const display = document.getElementById('answerDisplay');        const slots = display.querySelectorAll('.letter-slot');        slots.forEach((slot, i) => {            slot.textContent = this.selectedLetters[i] || '';            slot.classList.toggle('filled', !!this.selectedLetters[i]);        });    }    clearSelection() {        this.selectedLetters = [];        document.querySelectorAll('.letter-box').forEach(box => box.classList.remove('selected'));        this.updateAnswerDisplay();    }    skipWord() {        this.currentWordIndex++;        this.nextWord();    }    checkWord() {        const answer = this.selectedLetters.join('');        if (answer === this.currentWord.word) {            const points = 20 * this.currentWord.difficulty;            this.score += points;            this.wordsFound++;            document.getElementById('gameScore').textContent = this.score;            document.getElementById('wordsFound').textContent = this.wordsFound;            this.showCorrectFeedback();            this.playSound('correct');            setTimeout(() => {                this.currentWordIndex++;                this.nextWord();            }, 1000);        } else {            this.showWrongFeedback();            this.playSound('wrong');            this.clearSelection();        }    }    showCorrectFeedback() {        const content = document.getElementById('gameContent');        content.innerHTML = `            <div class="feedback correct">                <div class="feedback-icon">✅</div>                <div class="feedback-text">أحسنت! الكلمة صحيحة</div>                <div class="feedback-word">${this.currentWord.word}</div>            </div>        `;    }    showWrongFeedback() {        const display = document.getElementById('answerDisplay');        display.classList.add('shake');        setTimeout(() => display.classList.remove('shake'), 500);    }    playClickSound() {        try {            const ctx = new (window.AudioContext || window.webkitAudioContext)();            const osc = ctx.createOscillator();            const gain = ctx.createGain();            osc.connect(gain);            gain.connect(ctx.destination);            osc.frequency.setValueAtTime(800, ctx.currentTime);            gain.gain.setValueAtTime(0.1, ctx.currentTime);            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);            osc.start(ctx.currentTime);            osc.stop(ctx.currentTime + 0.1);        } catch (e) { }    }    playSound(type) {        try {            const ctx = new (window.AudioContext || window.webkitAudioContext)();            const osc = ctx.createOscillator();            const gain = ctx.createGain();            osc.connect(gain);            gain.connect(ctx.destination);            if (type === 'correct') {                osc.frequency.setValueAtTime(523, ctx.currentTime);                osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);                osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2);            } else {                osc.frequency.setValueAtTime(200, ctx.currentTime);                osc.frequency.setValueAtTime(150, ctx.currentTime + 0.1);            }            gain.gain.setValueAtTime(0.3, ctx.currentTime);            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);            osc.start(ctx.currentTime);            osc.stop(ctx.currentTime + 0.3);        } catch (e) { }    }    startTimer() {        this.timer = setInterval(() => {            this.timeLeft--;            const timerEl = document.getElementById('gameTimer');            if (timerEl) timerEl.textContent = this.timeLeft;            if (this.timeLeft <= 0) this.endGame();        }, 1000);    }    endGame() {        clearInterval(this.timer);        const stars = this.wordsFound >= 10 ? 3 : this.wordsFound >= 5 ? 2 : 1;        this.container.innerHTML = `            <div class="game-over">                <h2>🏁 انتهت اللعبة!</h2>                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>                <div class="final-score">                    <p>مجموع نقاطك: <span class="big-score">${this.score}</span></p>                    <p>الكلمات المكتشفة: ${this.wordsFound}</p>                </div>                <div class="game-over-buttons">                    <button class="game-btn play-again" onclick="startGame('word-hunter')">🔄 العب مرة أخرى</button>                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>                </div>            </div>        `;        PointsSystem.addPoints(this.score);        unlockAchievement('first_game');    }}class MemoryGame {    constructor(container) {        this.container = container;        this.cards = [];        this.flippedCards = [];        this.matchedPairs = 0;        this.moves = 0;        this.timeElapsed = 0;        this.timerInterval = null;        this.emojis = ['🎨', '🔬', '📚', '🎵', '🌟', '🚀', '🎓', '💡'];        this.isLocked = false;    }    start() {        this.cards = [...this.emojis, ...this.emojis]            .sort(() => Math.random() - 0.5)            .map((emoji, index) => ({                id: index,                emoji,                flipped: false,                matched: false            }));        this.flippedCards = [];        this.matchedPairs = 0;        this.moves = 0;        this.timeElapsed = 0;        this.isLocked = false;        this.render();        this.startTimer();    }    render() {        this.container.innerHTML = `            <div class="game-header">                <h2>🧠 لعبة الذاكرة</h2>                <div class="game-stats">                    <span class="moves">🎯 المحاولات: <b id="gameMoves">${this.moves}</b></span>                    <span class="pairs">🃏 الأزواج: <b id="gamePairs">${this.matchedPairs}</b>/${this.emojis.length}</span>                    <span class="timer">⏱️ الوقت: <b id="gameTimer">0</b>ث</span>                </div>            </div>            <div class="memory-grid" id="memoryGrid">                ${this.cards.map(card => `                    <div class="memory-card ${card.matched ? 'matched' : ''}"                          data-id="${card.id}">                        <div class="card-inner">                            <div class="card-front">❓</div>                            <div class="card-back">${card.emoji}</div>                        </div>                    </div>                `).join('')}            </div>        `;                document.querySelectorAll('.memory-card').forEach(card => {            card.addEventListener('click', () => this.flipCard(parseInt(card.dataset.id)));        });    }    flipCard(id) {        if (this.isLocked) return;        const card = this.cards[id];        if (card.flipped || card.matched) return;        if (this.flippedCards.length >= 2) return;        card.flipped = true;        this.flippedCards.push(card);        const cardElement = document.querySelector(`.memory-card[data-id="${id}"]`);        cardElement.classList.add('flipped');        this.playFlipSound();        if (this.flippedCards.length === 2) {            this.moves++;            document.getElementById('gameMoves').textContent = this.moves;            this.checkMatch();        }    }    checkMatch() {        const [card1, card2] = this.flippedCards;        this.isLocked = true;        if (card1.emoji === card2.emoji) {            card1.matched = true;            card2.matched = true;            this.matchedPairs++;            document.getElementById('gamePairs').textContent = this.matchedPairs;            const el1 = document.querySelector(`.memory-card[data-id="${card1.id}"]`);            const el2 = document.querySelector(`.memory-card[data-id="${card2.id}"]`);            el1.classList.add('matched');            el2.classList.add('matched');            this.playMatchSound();            this.flippedCards = [];            this.isLocked = false;            if (this.matchedPairs === this.emojis.length) {                setTimeout(() => this.endGame(), 500);            }        } else {            setTimeout(() => {                card1.flipped = false;                card2.flipped = false;                const el1 = document.querySelector(`.memory-card[data-id="${card1.id}"]`);                const el2 = document.querySelector(`.memory-card[data-id="${card2.id}"]`);                el1.classList.remove('flipped');                el2.classList.remove('flipped');                this.flippedCards = [];                this.isLocked = false;            }, 1000);        }    }    playFlipSound() {        try {            const ctx = new (window.AudioContext || window.webkitAudioContext)();            const osc = ctx.createOscillator();            const gain = ctx.createGain();            osc.connect(gain);            gain.connect(ctx.destination);            osc.frequency.setValueAtTime(400, ctx.currentTime);            osc.frequency.setValueAtTime(600, ctx.currentTime + 0.05);            gain.gain.setValueAtTime(0.1, ctx.currentTime);            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);            osc.start(ctx.currentTime);            osc.stop(ctx.currentTime + 0.1);        } catch (e) { }    }    playMatchSound() {        try {            const ctx = new (window.AudioContext || window.webkitAudioContext)();            const osc = ctx.createOscillator();            const gain = ctx.createGain();            osc.connect(gain);            gain.connect(ctx.destination);            osc.frequency.setValueAtTime(523, ctx.currentTime);            osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);            osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2);            gain.gain.setValueAtTime(0.2, ctx.currentTime);            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);            osc.start(ctx.currentTime);            osc.stop(ctx.currentTime + 0.3);        } catch (e) { }    }    startTimer() {        this.timerInterval = setInterval(() => {            this.timeElapsed++;            const timerEl = document.getElementById('gameTimer');            if (timerEl) timerEl.textContent = this.timeElapsed;        }, 1000);    }    endGame() {        clearInterval(this.timerInterval);        const perfectMoves = this.emojis.length;        const efficiency = Math.max(0, Math.round((perfectMoves / this.moves) * 100));        const timeBonus = Math.max(0, 60 - this.timeElapsed);        const score = Math.max(20, Math.round(efficiency + timeBonus));        const stars = efficiency >= 80 ? 3 : efficiency >= 50 ? 2 : 1;        this.container.innerHTML = `            <div class="game-over">                <h2>🎉 أحسنت!</h2>                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>                <div class="final-score">                    <p>نقاطك: <span class="big-score">${score}</span></p>                    <p>المحاولات: ${this.moves} | الوقت: ${this.timeElapsed}ث</p>                    <p>الكفاءة: ${efficiency}%</p>                </div>                <div class="game-over-buttons">                    <button class="game-btn play-again" onclick="startGame('memory')">🔄 العب مرة أخرى</button>                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>                </div>            </div>        `;        PointsSystem.addPoints(score);        unlockAchievement('first_game');    }}class ScienceQuizGame {    constructor(container) {        this.container = container;        this.score = 0;        this.currentQuestion = 0;        this.questions = [            { q: "ما هو أقرب كوكب للشمس؟", options: ["الأرض", "عطارد", "الزهرة", "المريخ"], answer: 1, icon: "🪐" },            { q: "ما هي الغازات التي يتكون منها الماء؟", options: ["أكسجين ونيتروجين", "هيدروجين وأكسجين", "كربون وأكسجين", "هيليوم وهيدروجين"], answer: 1, icon: "💧" },            { q: "كم عدد عظام جسم الإنسان البالغ؟", options: ["106", "206", "306", "406"], answer: 1, icon: "🦴" },            { q: "ما هو أكبر عضو في جسم الإنسان؟", options: ["القلب", "الكبد", "الجلد", "الرئة"], answer: 2, icon: "🫀" },            { q: "ما هي وحدة قياس القوة؟", options: ["جول", "نيوتن", "واط", "أمبير"], answer: 1, icon: "⚡" },            { q: "كم عدد ألوان قوس قزح؟", options: ["5", "6", "7", "8"], answer: 2, icon: "🌈" },            { q: "ما هو الحيوان الأسرع على الأرض؟", options: ["الأسد", "الفهد", "الحصان", "النمر"], answer: 1, icon: "🐆" },            { q: "ما هي المادة التي تنتجها النباتات في عملية البناء الضوئي؟", options: ["الماء", "الأكسجين", "ثاني أكسيد الكربون", "النيتروجين"], answer: 1, icon: "🌱" },        ];        this.correctAnswers = 0;    }    start() {        this.score = 0;        this.currentQuestion = 0;        this.correctAnswers = 0;        this.shuffleQuestions();        this.render();        this.showQuestion();    }    shuffleQuestions() {        this.questions = this.questions.sort(() => Math.random() - 0.5).slice(0, 5);    }    render() {        this.container.innerHTML = `            <div class="game-header">                <h2>🧪 اختبار العلوم</h2>                <div class="game-stats">                    <span class="score">⭐ النقاط: <b id="gameScore">${this.score}</b></span>                    <span class="question">❓ السؤال: <b id="questionNum">${this.currentQuestion + 1}</b>/${this.questions.length}</span>                </div>            </div>            <div class="game-content" id="gameContent"></div>        `;    }    showQuestion() {        if (this.currentQuestion >= this.questions.length) {            this.endGame();            return;        }        const q = this.questions[this.currentQuestion];        document.getElementById('gameContent').innerHTML = `            <div class="quiz-question">                <div class="question-icon">${q.icon}</div>                <div class="question-text">${q.q}</div>                <div class="options-grid">                    ${q.options.map((opt, i) => `                        <button class="option-btn" data-index="${i}" onclick="currentGame.selectAnswer(${i})">                            <span class="option-letter">${String.fromCharCode(65 + i)}</span>                            <span class="option-text">${opt}</span>                        </button>                    `).join('')}                </div>            </div>        `;    }    selectAnswer(index) {        const q = this.questions[this.currentQuestion];        const buttons = document.querySelectorAll('.option-btn');        buttons.forEach(btn => btn.disabled = true);        if (index === q.answer) {            buttons[index].classList.add('correct');            this.score += 20;            this.correctAnswers++;            document.getElementById('gameScore').textContent = this.score;            this.playSound('correct');        } else {            buttons[index].classList.add('wrong');            buttons[q.answer].classList.add('correct');            this.playSound('wrong');        }        setTimeout(() => {            this.currentQuestion++;            document.getElementById('questionNum').textContent = Math.min(this.currentQuestion + 1, this.questions.length);            this.showQuestion();        }, 1500);    }    playSound(type) {        try {            const ctx = new (window.AudioContext || window.webkitAudioContext)();            const osc = ctx.createOscillator();            const gain = ctx.createGain();            osc.connect(gain);            gain.connect(ctx.destination);            if (type === 'correct') {                osc.frequency.setValueAtTime(523, ctx.currentTime);                osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);                osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2);            } else {                osc.frequency.setValueAtTime(200, ctx.currentTime);            }            gain.gain.setValueAtTime(0.2, ctx.currentTime);            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);            osc.start(ctx.currentTime);            osc.stop(ctx.currentTime + 0.3);        } catch (e) { }    }    endGame() {        const percentage = Math.round((this.correctAnswers / this.questions.length) * 100);        const stars = percentage >= 80 ? 3 : percentage >= 60 ? 2 : 1;        this.container.innerHTML = `            <div class="game-over">                <h2>🎉 انتهى الاختبار!</h2>                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>                <div class="final-score">                    <p>نقاطك: <span class="big-score">${this.score}</span></p>                    <p>الإجابات الصحيحة: ${this.correctAnswers} من ${this.questions.length}</p>                    <p>النسبة: ${percentage}%</p>                </div>                <div class="game-over-buttons">                    <button class="game-btn play-again" onclick="startGame('science-quiz')">🔄 العب مرة أخرى</button>                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>                </div>            </div>        `;        PointsSystem.addPoints(this.score);        unlockAchievement('first_game');    }}class ColorChallengeGame {    constructor(container) {        this.container = container;        this.score = 0;        this.timeLeft = 30;        this.currentRound = 0;        this.maxRounds = 10;        this.timer = null;        this.colors = [            { name: 'أحمر', hex: '#ff4444', nameEn: 'red' },            { name: 'أزرق', hex: '#4444ff', nameEn: 'blue' },            { name: 'أخضر', hex: '#44ff44', nameEn: 'green' },            { name: 'أصفر', hex: '#ffff44', nameEn: 'yellow' },            { name: 'برتقالي', hex: '#ff9944', nameEn: 'orange' },            { name: 'بنفسجي', hex: '#9944ff', nameEn: 'purple' },            { name: 'وردي', hex: '#ff44ff', nameEn: 'pink' },            { name: 'أسود', hex: '#333333', nameEn: 'black' }        ];    }    start() {        this.score = 0;        this.timeLeft = 30;        this.currentRound = 0;        this.render();        this.startTimer();        this.nextRound();    }    render() {        this.container.innerHTML = `            <div class="game-header" style="background: linear-gradient(135deg, #ff6b6b, #ee5a24);">                <h2>🎨 تحدي الألوان</h2>                <div class="game-stats">                    <span>⭐ النقاط: <b id="gameScore">${this.score}</b></span>                    <span>🎯 الجولة: <b id="gameRound">${this.currentRound}</b>/${this.maxRounds}</span>                    <span>⏱️ الوقت: <b id="gameTimer">${this.timeLeft}</b>ث</span>                </div>            </div>            <div class="game-content" id="gameContent">                <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem;">اضغط على اللون الذي يطابق الكلمة، وليس لون الكلمة!</p>            </div>        `;    }    nextRound() {        if (this.currentRound >= this.maxRounds || this.timeLeft <= 0) {            this.endGame();            return;        }        this.currentRound++;        document.getElementById('gameRound').textContent = this.currentRound;                const wordColor = this.colors[Math.floor(Math.random() * this.colors.length)];        let textColor;        do {            textColor = this.colors[Math.floor(Math.random() * this.colors.length)];        } while (textColor.name === wordColor.name);                const options = this.shuffleArray([...this.colors]).slice(0, 4);        if (!options.find(c => c.name === wordColor.name)) {            options[0] = wordColor;        }        this.shuffleArray(options);        this.correctAnswer = wordColor.name;        document.getElementById('gameContent').innerHTML = `            <div class="color-challenge">                <div class="color-word" style="color: ${textColor.hex}; font-size: 3rem; font-weight: bold; margin: 30px 0;">                    ${wordColor.name}                </div>                <p style="color: rgba(255,255,255,0.6); margin-bottom: 20px;">اختر اللون المكتوب (وليس لون الكلمة)</p>                <div class="color-options">                    ${options.map(color => `                        <button class="color-btn" style="background: ${color.hex};" onclick="currentGame.selectColor('${color.name}')">                        </button>                    `).join('')}                </div>            </div>        `;    }    selectColor(colorName) {        if (colorName === this.correctAnswer) {            this.score += 15;            document.getElementById('gameScore').textContent = this.score;            this.playSound('correct');            this.nextRound();        } else {            this.playSound('wrong');            document.querySelectorAll('.color-btn').forEach(btn => {                btn.style.opacity = '0.5';            });            setTimeout(() => this.nextRound(), 800);        }    }    shuffleArray(array) {        for (let i = array.length - 1; i > 0; i--) {            const j = Math.floor(Math.random() * (i + 1));            [array[i], array[j]] = [array[j], array[i]];        }        return array;    }    startTimer() {        this.timer = setInterval(() => {            this.timeLeft--;            const timerEl = document.getElementById('gameTimer');            if (timerEl) timerEl.textContent = this.timeLeft;            if (this.timeLeft <= 0) this.endGame();        }, 1000);    }    playSound(type) {        try {            const ctx = new (window.AudioContext || window.webkitAudioContext)();            const osc = ctx.createOscillator();            const gain = ctx.createGain();            osc.connect(gain);            gain.connect(ctx.destination);            osc.frequency.setValueAtTime(type === 'correct' ? 523 : 200, ctx.currentTime);            if (type === 'correct') osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);            gain.gain.setValueAtTime(0.2, ctx.currentTime);            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);            osc.start(ctx.currentTime);            osc.stop(ctx.currentTime + 0.2);        } catch (e) { }    }    endGame() {        clearInterval(this.timer);        const stars = this.score >= 120 ? 3 : this.score >= 80 ? 2 : 1;        this.container.innerHTML = `            <div class="game-over">                <h2>🎨 انتهى التحدي!</h2>                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>                <div class="final-score">                    <p>نقاطك: <span class="big-score">${this.score}</span></p>                    <p>الجولات المكتملة: ${this.currentRound}/${this.maxRounds}</p>                </div>                <div class="game-over-buttons">                    <button class="game-btn play-again" onclick="startGame('color-challenge')">🔄 العب مرة أخرى</button>                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>                </div>            </div>        `;        PointsSystem.addPoints(this.score);        unlockAchievement('first_game');    }}class LetterRaceGame {    constructor(container) {        this.container = container;        this.score = 0;        this.timeLeft = 45;        this.timer = null;        this.currentLetter = '';        this.lettersFound = 0;    }    start() {        this.score = 0;        this.timeLeft = 45;        this.lettersFound = 0;        this.render();        this.startTimer();        this.nextRound();    }    render() {        this.container.innerHTML = `            <div class="game-header" style="background: linear-gradient(135deg, #11998e, #38ef7d);">                <h2>🔤 سباق الحروف</h2>                <div class="game-stats">                    <span>⭐ النقاط: <b id="gameScore">${this.score}</b></span>                    <span>🔤 الحروف: <b id="lettersFound">${this.lettersFound}</b></span>                    <span>⏱️ الوقت: <b id="gameTimer">${this.timeLeft}</b>ث</span>                </div>            </div>            <div class="game-content" id="gameContent"></div>        `;    }    nextRound() {        if (this.timeLeft <= 0) {            this.endGame();            return;        }        const arabicLetters = 'أبتثجحخدذرزسشصضطظعغفقكلمنهوي'.split('');        this.currentLetter = arabicLetters[Math.floor(Math.random() * arabicLetters.length)];                const gridSize = 16;        const letters = [];        const correctPositions = [];        const numCorrect = Math.floor(Math.random() * 3) + 2;         for (let i = 0; i < gridSize; i++) {            if (correctPositions.length < numCorrect && Math.random() < 0.3) {                letters.push(this.currentLetter);                correctPositions.push(i);            } else {                let randomLetter;                do {                    randomLetter = arabicLetters[Math.floor(Math.random() * arabicLetters.length)];                } while (randomLetter === this.currentLetter);                letters.push(randomLetter);            }        }                if (correctPositions.length === 0) {            const pos = Math.floor(Math.random() * gridSize);            letters[pos] = this.currentLetter;            correctPositions.push(pos);        }        this.correctPositions = correctPositions;        this.foundPositions = [];        document.getElementById('gameContent').innerHTML = `            <div class="letter-race">                <div class="target-letter">                    <span>ابحث عن الحرف:</span>                    <span class="big-letter">${this.currentLetter}</span>                </div>                <div class="letter-grid">                    ${letters.map((letter, i) => `                        <button class="grid-letter" data-index="${i}" onclick="currentGame.selectLetter(${i}, '${letter}')">                            ${letter}                        </button>                    `).join('')}                </div>                <button class="game-btn" style="margin-top: 20px;" onclick="currentGame.submitRound()">✓ انتهيت</button>            </div>        `;    }    selectLetter(index, letter) {        const btn = document.querySelector(`.grid-letter[data-index="${index}"]`);        if (btn.classList.contains('selected')) {            btn.classList.remove('selected');            this.foundPositions = this.foundPositions.filter(p => p !== index);        } else {            btn.classList.add('selected');            this.foundPositions.push(index);        }    }    submitRound() {        let correct = 0;        let wrong = 0;        this.foundPositions.forEach(pos => {            if (this.correctPositions.includes(pos)) {                correct++;            } else {                wrong++;            }        });        const missed = this.correctPositions.length - correct;        const roundScore = (correct * 10) - (wrong * 5) - (missed * 3);        this.score += Math.max(0, roundScore);        this.lettersFound += correct;        document.getElementById('gameScore').textContent = this.score;        document.getElementById('lettersFound').textContent = this.lettersFound;                document.querySelectorAll('.grid-letter').forEach((btn, i) => {            if (this.correctPositions.includes(i)) {                btn.style.background = '#00ff88';                btn.style.color = '#000';            }        });        setTimeout(() => this.nextRound(), 1000);    }    startTimer() {        this.timer = setInterval(() => {            this.timeLeft--;            const timerEl = document.getElementById('gameTimer');            if (timerEl) timerEl.textContent = this.timeLeft;            if (this.timeLeft <= 0) this.endGame();        }, 1000);    }    endGame() {        clearInterval(this.timer);        const stars = this.score >= 100 ? 3 : this.score >= 50 ? 2 : 1;        this.container.innerHTML = `            <div class="game-over">                <h2>🔤 انتهى السباق!</h2>                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>                <div class="final-score">                    <p>نقاطك: <span class="big-score">${this.score}</span></p>                    <p>الحروف التي وجدتها: ${this.lettersFound}</p>                </div>                <div class="game-over-buttons">                    <button class="game-btn play-again" onclick="startGame('letter-race')">🔄 العب مرة أخرى</button>                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>                </div>            </div>        `;        PointsSystem.addPoints(this.score);        unlockAchievement('first_game');    }}class ShapePuzzleGame {    constructor(container) {        this.container = container;        this.score = 0;        this.level = 1;        this.currentRound = 0;        this.maxRounds = 8;        this.shapes = ['🔵', '🔴', '🟢', '🟡', '🟣', '🟠', '⬛', '⬜'];    }    start() {        this.score = 0;        this.level = 1;        this.currentRound = 0;        this.render();        this.nextRound();    }    render() {        this.container.innerHTML = `            <div class="game-header" style="background: linear-gradient(135deg, #a55eea, #8854d0);">                <h2>🧩 لغز الأشكال</h2>                <div class="game-stats">                    <span>⭐ النقاط: <b id="gameScore">${this.score}</b></span>                    <span>📊 المستوى: <b id="gameLevel">${this.level}</b></span>                    <span>🎯 الجولة: <b id="gameRound">${this.currentRound}</b>/${this.maxRounds}</span>                </div>            </div>            <div class="game-content" id="gameContent"></div>        `;    }    nextRound() {        if (this.currentRound >= this.maxRounds) {            this.endGame();            return;        }        this.currentRound++;        document.getElementById('gameRound').textContent = this.currentRound;                const patternLength = 3 + this.level;        const pattern = [];        for (let i = 0; i < patternLength; i++) {            pattern.push(this.shapes[Math.floor(Math.random() * this.shapes.length)]);        }                this.correctAnswer = pattern[0];                 document.getElementById('gameContent').innerHTML = `            <div class="shape-puzzle">                <p style="color: rgba(255,255,255,0.7); margin-bottom: 20px;">احفظ النمط التالي:</p>                <div class="pattern-display" id="patternDisplay">                    ${pattern.map(s => `<span class="pattern-shape">${s}</span>`).join('')}                </div>                <div class="pattern-countdown" id="countdown">3</div>            </div>        `;                let count = 3;        const countInterval = setInterval(() => {            count--;            const countEl = document.getElementById('countdown');            if (countEl) countEl.textContent = count;            if (count <= 0) {                clearInterval(countInterval);                this.showQuestion(pattern);            }        }, 1000);    }    showQuestion(pattern) {                const hiddenIndex = Math.floor(Math.random() * pattern.length);        this.correctAnswer = pattern[hiddenIndex];        const displayPattern = pattern.map((s, i) =>            i === hiddenIndex ? '❓' : s        );                const options = [this.correctAnswer];        while (options.length < 4) {            const randomShape = this.shapes[Math.floor(Math.random() * this.shapes.length)];            if (!options.includes(randomShape)) {                options.push(randomShape);            }        }        this.shuffleArray(options);        document.getElementById('gameContent').innerHTML = `            <div class="shape-puzzle">                <p style="color: rgba(255,255,255,0.7); margin-bottom: 20px;">ما هو الشكل المفقود؟</p>                <div class="pattern-display">                    ${displayPattern.map(s => `<span class="pattern-shape">${s}</span>`).join('')}                </div>                <div class="shape-options">                    ${options.map(shape => `                        <button class="shape-btn" onclick="currentGame.selectShape('${shape}')">${shape}</button>                    `).join('')}                </div>            </div>        `;    }    selectShape(shape) {        if (shape === this.correctAnswer) {            this.score += 20 * this.level;            document.getElementById('gameScore').textContent = this.score;            this.playSound('correct');            if (this.currentRound % 3 === 0 && this.level < 3) {                this.level++;                document.getElementById('gameLevel').textContent = this.level;            }            setTimeout(() => this.nextRound(), 500);        } else {            this.playSound('wrong');            document.querySelectorAll('.shape-btn').forEach(btn => {                if (btn.textContent === this.correctAnswer) {                    btn.style.transform = 'scale(1.3)';                    btn.style.boxShadow = '0 0 20px #00ff88';                }            });            setTimeout(() => this.nextRound(), 1500);        }    }    shuffleArray(array) {        for (let i = array.length - 1; i > 0; i--) {            const j = Math.floor(Math.random() * (i + 1));            [array[i], array[j]] = [array[j], array[i]];        }        return array;    }    playSound(type) {        try {            const ctx = new (window.AudioContext || window.webkitAudioContext)();            const osc = ctx.createOscillator();            const gain = ctx.createGain();            osc.connect(gain);            gain.connect(ctx.destination);            osc.frequency.setValueAtTime(type === 'correct' ? 523 : 200, ctx.currentTime);            gain.gain.setValueAtTime(0.2, ctx.currentTime);            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);            osc.start(ctx.currentTime);            osc.stop(ctx.currentTime + 0.2);        } catch (e) { }    }    endGame() {        const stars = this.score >= 150 ? 3 : this.score >= 80 ? 2 : 1;        this.container.innerHTML = `            <div class="game-over">                <h2>🧩 أحسنت!</h2>                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>                <div class="final-score">                    <p>نقاطك: <span class="big-score">${this.score}</span></p>                    <p>المستوى: ${this.level}</p>                </div>                <div class="game-over-buttons">                    <button class="game-btn play-again" onclick="startGame('shape-puzzle')">🔄 العب مرة أخرى</button>                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>                </div>            </div>        `;        PointsSystem.addPoints(this.score);        unlockAchievement('first_game');    }}class SpaceAdventureGame {    constructor(container) {        this.container = container;        this.score = 0;        this.currentQuestion = 0;        this.questions = [            { q: "كم عدد كواكب المجموعة الشمسية؟", options: ["7", "8", "9", "10"], answer: 1, icon: "🪐" },            { q: "ما هو أكبر كوكب في المجموعة الشمسية؟", options: ["الأرض", "المريخ", "المشتري", "زحل"], answer: 2, icon: "🌍" },            { q: "ما هو أقرب نجم للأرض؟", options: ["القمر", "الشمس", "المريخ", "الزهرة"], answer: 1, icon: "☀️" },            { q: "كم يستغرق دوران الأرض حول نفسها؟", options: ["12 ساعة", "24 ساعة", "7 أيام", "30 يوم"], answer: 1, icon: "🌎" },            { q: "ما هو الكوكب الأحمر؟", options: ["الزهرة", "المريخ", "عطارد", "نبتون"], answer: 1, icon: "🔴" },            { q: "ما اسم مجرتنا؟", options: ["المرأة المسلسلة", "درب التبانة", "السديم", "أورايون"], answer: 1, icon: "🌌" },            { q: "من هو أول رائد فضاء عربي؟", options: ["سلطان النيادي", "هزاع المنصوري", "محمد فارس", "عبدالله الصاوي"], answer: 2, icon: "👨‍🚀" },            { q: "كم قمراً يدور حول كوكب المشتري؟", options: ["أقل من 10", "بين 10-50", "أكثر من 50", "لا يوجد"], answer: 2, icon: "🌙" },        ];        this.correctAnswers = 0;        this.rocketPosition = 0;    }    start() {        this.score = 0;        this.currentQuestion = 0;        this.correctAnswers = 0;        this.rocketPosition = 0;        this.shuffleQuestions();        this.render();        this.showQuestion();    }    shuffleQuestions() {        this.questions = this.questions.sort(() => Math.random() - 0.5).slice(0, 5);    }    render() {        this.container.innerHTML = `            <div class="game-header" style="background: linear-gradient(135deg, #302b63, #24243e);">                <h2>🚀 مغامرة الفضاء</h2>                <div class="game-stats">                    <span>⭐ النقاط: <b id="gameScore">${this.score}</b></span>                    <span>🚀 المرحلة: <b id="questionNum">${this.currentQuestion + 1}</b>/${this.questions.length}</span>                </div>            </div>            <div class="space-progress">                <div class="space-track">                    <div class="rocket" id="rocket">🚀</div>                    <div class="planets">                        ${this.questions.map((_, i) => `<span class="planet-marker" style="left: ${((i + 1) / this.questions.length) * 100}%">🪐</span>`).join('')}                    </div>                </div>            </div>            <div class="game-content" id="gameContent"></div>        `;    }    showQuestion() {        if (this.currentQuestion >= this.questions.length) {            this.endGame();            return;        }        const q = this.questions[this.currentQuestion];        document.getElementById('gameContent').innerHTML = `            <div class="space-question">                <div class="question-icon" style="font-size: 4rem; margin-bottom: 15px;">${q.icon}</div>                <div class="question-text" style="font-size: 1.3rem; color: white; margin-bottom: 25px;">${q.q}</div>                <div class="options-grid">                    ${q.options.map((opt, i) => `                        <button class="option-btn space-option" data-index="${i}" onclick="currentGame.selectAnswer(${i})">                            <span class="option-letter">${String.fromCharCode(65 + i)}</span>                            <span class="option-text">${opt}</span>                        </button>                    `).join('')}                </div>            </div>        `;    }    selectAnswer(index) {        const q = this.questions[this.currentQuestion];        const buttons = document.querySelectorAll('.space-option');        buttons.forEach(btn => btn.disabled = true);        if (index === q.answer) {            buttons[index].classList.add('correct');            this.score += 25;            this.correctAnswers++;            document.getElementById('gameScore').textContent = this.score;            this.moveRocket();            this.playSound('correct');        } else {            buttons[index].classList.add('wrong');            buttons[q.answer].classList.add('correct');            this.playSound('wrong');        }        setTimeout(() => {            this.currentQuestion++;            const numEl = document.getElementById('questionNum');            if (numEl) numEl.textContent = Math.min(this.currentQuestion + 1, this.questions.length);            this.showQuestion();        }, 1500);    }    moveRocket() {        this.rocketPosition = ((this.currentQuestion + 1) / this.questions.length) * 100;        const rocket = document.getElementById('rocket');        if (rocket) {            rocket.style.left = `${this.rocketPosition}%`;        }    }    playSound(type) {        try {            const ctx = new (window.AudioContext || window.webkitAudioContext)();            const osc = ctx.createOscillator();            const gain = ctx.createGain();            osc.connect(gain);            gain.connect(ctx.destination);            if (type === 'correct') {                osc.frequency.setValueAtTime(392, ctx.currentTime);                osc.frequency.setValueAtTime(523, ctx.currentTime + 0.1);                osc.frequency.setValueAtTime(659, ctx.currentTime + 0.2);            } else {                osc.frequency.setValueAtTime(200, ctx.currentTime);            }            gain.gain.setValueAtTime(0.2, ctx.currentTime);            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);            osc.start(ctx.currentTime);            osc.stop(ctx.currentTime + 0.3);        } catch (e) { }    }    endGame() {        const percentage = Math.round((this.correctAnswers / this.questions.length) * 100);        const stars = percentage >= 80 ? 3 : percentage >= 60 ? 2 : 1;        this.container.innerHTML = `            <div class="game-over">                <h2>🚀 وصلت إلى الفضاء!</h2>                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>                <div class="final-score">                    <p>نقاطك: <span class="big-score">${this.score}</span></p>                    <p>الإجابات الصحيحة: ${this.correctAnswers} من ${this.questions.length}</p>                </div>                <div class="game-over-buttons">                    <button class="game-btn play-again" onclick="startGame('space-adventure')">🔄 العب مرة أخرى</button>                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>                </div>            </div>        `;        PointsSystem.addPoints(this.score);        unlockAchievement('first_game');    }}let currentGame = null;function startGame(gameId) {    const modal = document.getElementById('gameModal');    const container = document.getElementById('gameContainer');    if (!modal || !container) {        console.error('Game modal or container not found');        return;    }    modal.classList.add('active');    document.body.style.overflow = 'hidden';    switch (gameId) {        case 'math-race':            currentGame = new MathRaceGame(container);            break;        case 'word-hunter':            currentGame = new WordHunterGame(container);            break;        case 'memory':            currentGame = new MemoryGame(container);            break;        case 'science-quiz':            currentGame = new ScienceQuizGame(container);            break;        case 'color-challenge':            currentGame = new ColorChallengeGame(container);            break;        case 'letter-race':            currentGame = new LetterRaceGame(container);            break;        case 'shape-puzzle':            currentGame = new ShapePuzzleGame(container);            break;        case 'space-adventure':            currentGame = new SpaceAdventureGame(container);            break;        default:            currentGame = new MathRaceGame(container);    }    if (currentGame) currentGame.start();}function renderGames() {    const slider = document.getElementById('gamesSlider');    if (!slider) return;    const games = [        { id: 'math-race', title: 'سباق الأرقام', description: 'تحدى نفسك في الرياضيات!', icon: '🏎️', difficulty: 'سهل', points: 100, color: 'linear-gradient(135deg, #ffd700, #ff9a00)' },        { id: 'word-hunter', title: 'صائد الكلمات', description: 'اكتشف الكلمات المخفية', icon: '🎯', difficulty: 'متوسط', points: 150, color: 'linear-gradient(135deg, #667eea, #764ba2)' },        { id: 'science-quiz', title: 'اختبار العلوم', description: 'اختبر معلوماتك العلمية', icon: '🧪', difficulty: 'متوسط', points: 200, color: 'linear-gradient(135deg, #4facfe, #00f2fe)' },        { id: 'memory', title: 'لعبة الذاكرة', description: 'قوِّ ذاكرتك!', icon: '🧠', difficulty: 'سهل', points: 80, color: 'linear-gradient(135deg, #f093fb, #f5576c)' },        { id: 'color-challenge', title: 'تحدي الألوان', description: 'اختر اللون الصحيح!', icon: '🎨', difficulty: 'متوسط', points: 120, color: 'linear-gradient(135deg, #ff6b6b, #ee5a24)' },        { id: 'letter-race', title: 'سباق الحروف', description: 'ابحث عن الحروف العربية', icon: '🔤', difficulty: 'سهل', points: 100, color: 'linear-gradient(135deg, #11998e, #38ef7d)' },        { id: 'shape-puzzle', title: 'لغز الأشكال', description: 'احفظ النمط وأكمله!', icon: '🧩', difficulty: 'صعب', points: 180, color: 'linear-gradient(135deg, #a55eea, #8854d0)' },        { id: 'space-adventure', title: 'مغامرة الفضاء', description: 'استكشف أسرار الكون!', icon: '🚀', difficulty: 'متوسط', points: 150, color: 'linear-gradient(135deg, #302b63, #24243e)' },        {            id: 'iq-mini',            title: 'اختبار الذكاء المصغّر',            description: 'اكتشف مستوى ذكائك واختبر سرعة التفكير!',            icon: '🧠',            difficulty: 'شامل',            points: 500,            color: 'linear-gradient(135deg, #FF6B6B, #4ECDC4)',            url: 'games/iq-mini/index.html'         },        {            id: 'coloring',            title: 'لعبة التلوين المبدع',            description: 'اختر رسمة وابدأ التلوين بألوان جميلة!',            icon: '🎨',            difficulty: 'ممتع',            points: 200,            color: 'linear-gradient(135deg, #FF9A9E, #FECFEF)',            url: 'games/coloring/index.html'        },        {            id: 'sentence-builder',            title: 'لعبة تكوين الجمل',            description: 'رتّب الكلمات وصمّم الجملة الصحيحة!',            icon: '✏️',            difficulty: 'تعليمي',            points: 150,            color: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',            url: 'games/sentence-builder/index.html'        },        {            id: 'puzzle-game',            title: 'لعبة ترتيب الصورة 🧩',            type: 'puzzle',            description: 'اركب القطع لتكتمل الصورة!',            difficulty: 'سهل',            points: 100,            icon: '🧩',            color: 'linear-gradient(135deg, #FF9F43 0%, #FECA57 100%)',            url: 'games/puzzle/index.html'        }    ];    slider.innerHTML = games.map(game => {        if (game.url) {                        return `            <a href="${game.url}" class="game-card" style="text-decoration: none; color: inherit; display: block;">                <div class="game-card-image" style="background: ${game.color};">                    ${game.icon}                </div>                <div class="game-card-content">                    <h3 class="game-card-title">${game.title}</h3>                    <p>${game.description}</p>                    <span class="game-card-type">${game.difficulty}</span>                    <span class="game-points">+${game.points} نقطة</span>                </div>            </a>`;        } else {                        return `            <div class="game-card" onclick="startGame('${game.id}')">                <div class="game-card-image" style="background: ${game.color};">                    ${game.icon}                </div>                <div class="game-card-content">                    <h3 class="game-card-title">${game.title}</h3>                    <p>${game.description}</p>                    <span class="game-card-type">${game.difficulty}</span>                    <span class="game-points">+${game.points} نقطة</span>                </div>            </div>`;        }    }).join('');}function closeGameModal() {    const modal = document.getElementById('gameModal');    if (modal) {        modal.classList.remove('active');        document.body.style.overflow = '';    }    if (currentGame && currentGame.timer) {        clearInterval(currentGame.timer);    }    if (currentGame && currentGame.timerInterval) {        clearInterval(currentGame.timerInterval);    }    currentGame = null;}window.startGame = startGame;window.renderGames = renderGames;window.closeGameModal = closeGameModal;window.PointsSystem = PointsSystem;window.AchievementsSystem = AchievementsSystem;window.unlockAchievement = unlockAchievement;window.currentGame = currentGame;
+
+
+
+const PointsSystem = {
+    currentPoints: 0,
+
+    addPoints(amount, x, y) {
+        this.currentPoints += amount;
+        this.updateDisplay();
+        if (x && y) {
+            showFlyingPoints(x, y, amount);
+        }
+        localStorage.setItem('studentPoints', this.currentPoints);
+        this.checkAchievements();
+    },
+
+    updateDisplay() {
+        const display = document.getElementById('totalPoints');
+        if (display) {
+            display.textContent = this.currentPoints;
+            display.classList.add('points-animation');
+            setTimeout(() => display.classList.remove('points-animation'), 500);
+        }
+    },
+
+    loadPoints() {
+        const saved = localStorage.getItem('studentPoints');
+        this.currentPoints = saved ? parseInt(saved) : 0;
+        this.updateDisplay();
+    },
+
+    checkAchievements() {
+        if (this.currentPoints >= 100) {
+            unlockAchievement('hundred_points');
+        }
+    }
+};
+
+
+const AchievementsSystem = {
+    achievements: [],
+
+    load() {
+        const saved = localStorage.getItem('achievements');
+        this.achievements = saved ? JSON.parse(saved) : [...SiteData.achievements];
+    },
+
+    unlock(id) {
+        const achievement = this.achievements.find(a => a.id === id);
+        if (achievement && !achievement.unlocked) {
+            achievement.unlocked = true;
+            localStorage.setItem('achievements', JSON.stringify(this.achievements));
+            showNotification(`🏆 إنجاز جديد: ${achievement.title}!`, 'success');
+            if (achievement.points > 0) {
+                PointsSystem.addPoints(achievement.points);
+            }
+            if (typeof createConfetti === 'function') {
+                createConfetti(50);
+            }
+        }
+    },
+
+    render() {
+        const grid = document.getElementById('achievementsGrid');
+        if (!grid) return;
+        grid.innerHTML = this.achievements.map(a => `
+            <div class="achievement-card ${a.unlocked ? 'unlocked' : 'locked'}">
+                <div class="achievement-icon">${a.icon}</div>
+                <h4>${a.title}</h4>
+                <p>${a.description}</p>
+                ${a.points > 0 ? `<span class="achievement-points">+${a.points} نقطة</span>` : ''}
+            </div>
+        `).join('');
+    }
+};
+
+function unlockAchievement(id) {
+    AchievementsSystem.unlock(id);
+}
+
+
+class MathRaceGame {
+    constructor(container) {
+        this.container = container;
+        this.score = 0;
+        this.level = 1;
+        this.timeLeft = 60;
+        this.questionsAnswered = 0;
+        this.correctAnswers = 0;
+        this.isPlaying = false;
+        this.timer = null;
+    }
+
+    start() {
+        this.score = 0;
+        this.level = 1;
+        this.timeLeft = 60;
+        this.questionsAnswered = 0;
+        this.correctAnswers = 0;
+        this.isPlaying = true;
+        this.render();
+        this.startTimer();
+        this.generateQuestion();
+        this.playSound('start');
+    }
+
+    render() {
+        this.container.innerHTML = `
+            <div class="game-header">
+                <h2>🏎️ سباق الأرقام</h2>
+                <div class="game-stats">
+                    <span class="score">⭐ النقاط: <b id="gameScore">${this.score}</b></span>
+                    <span class="level">📊 المستوى: <b id="gameLevel">${this.level}</b></span>
+                    <span class="timer">⏱️ الوقت: <b id="gameTimer">${this.timeLeft}</b>ث</span>
+                </div>
+            </div>
+            <div class="game-content" id="gameContent"></div>
+            <div class="game-answer">
+                <input type="number" id="answerInput" placeholder="أدخل الإجابة" autofocus>
+                <button id="submitAnswer" class="game-btn">✓ تأكيد</button>
+            </div>
+            <div class="game-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 100%"></div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('submitAnswer').addEventListener('click', () => this.checkAnswer());
+        document.getElementById('answerInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.checkAnswer();
+        });
+    }
+
+    generateQuestion() {
+        if (!this.isPlaying) return;
+
+        const operations = this.level >= 3 ? ['+', '-', '×', '÷'] :
+            this.level >= 2 ? ['+', '-', '×'] : ['+', '-'];
+        const op = operations[Math.floor(Math.random() * operations.length)];
+
+        let num1, num2;
+        const maxNum = 10 + (this.level * 8);
+
+        if (op === '÷') {
+            num2 = Math.floor(Math.random() * 10) + 2;
+            num1 = num2 * (Math.floor(Math.random() * 10) + 1);
+        } else if (op === '×') {
+            num1 = Math.floor(Math.random() * (maxNum / 2)) + 1;
+            num2 = Math.floor(Math.random() * 12) + 1;
+        } else {
+            num1 = Math.floor(Math.random() * maxNum) + 1;
+            num2 = Math.floor(Math.random() * maxNum) + 1;
+        }
+
+        if (op === '-' && num2 > num1) {
+            [num1, num2] = [num2, num1];
+        }
+
+        this.currentQuestion = { num1, num2, op };
+
+        switch (op) {
+            case '+': this.correctAnswer = num1 + num2; break;
+            case '-': this.correctAnswer = num1 - num2; break;
+            case '×': this.correctAnswer = num1 * num2; break;
+            case '÷': this.correctAnswer = num1 / num2; break;
+        }
+
+        const gameContent = document.getElementById('gameContent');
+        gameContent.innerHTML = `
+            <div class="question-display">
+                <div class="question-numbers">
+                    <span class="num num1">${num1}</span>
+                    <span class="operation">${op}</span>
+                    <span class="num num2">${num2}</span>
+                    <span class="equals">=</span>
+                    <span class="answer-box">?</span>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('answerInput').value = '';
+        document.getElementById('answerInput').focus();
+    }
+
+    checkAnswer() {
+        const input = document.getElementById('answerInput');
+        const answer = parseFloat(input.value);
+        const gameContent = document.getElementById('gameContent');
+
+        this.questionsAnswered++;
+
+        if (answer === this.correctAnswer) {
+            this.correctAnswers++;
+            const points = 10 * this.level + (this.level > 2 ? 5 : 0);
+            this.score += points;
+            document.getElementById('gameScore').textContent = this.score;
+
+            gameContent.classList.add('correct-animation');
+            setTimeout(() => gameContent.classList.remove('correct-animation'), 500);
+
+            if (this.correctAnswers % 5 === 0) {
+                this.level++;
+                document.getElementById('gameLevel').textContent = this.level;
+                this.showLevelUp();
+            }
+
+            this.playSound('correct');
+            this.generateQuestion();
+        } else {
+            gameContent.classList.add('wrong-animation');
+            setTimeout(() => gameContent.classList.remove('wrong-animation'), 500);
+            this.playSound('wrong');
+
+
+            const answerBox = gameContent.querySelector('.answer-box');
+            if (answerBox) {
+                answerBox.textContent = this.correctAnswer;
+                answerBox.style.color = '#00ff88';
+            }
+
+            setTimeout(() => this.generateQuestion(), 1500);
+        }
+    }
+
+    showLevelUp() {
+        const popup = document.createElement('div');
+        popup.className = 'level-up-popup';
+        popup.innerHTML = `<span>🎉 المستوى ${this.level}!</span>`;
+        popup.style.cssText = `
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #ffd700, #ff9a00);
+            color: #1a1a2e; padding: 20px 40px; border-radius: 20px;
+            font-size: 2rem; font-weight: bold; z-index: 10000;
+            animation: levelUpAnim 1s ease-out forwards;
+        `;
+        document.body.appendChild(popup);
+        setTimeout(() => popup.remove(), 1000);
+
+        if (typeof showNotification === 'function') {
+            showNotification(`🎉 ارتقيت للمستوى ${this.level}!`, 'success');
+        }
+    }
+
+    startTimer() {
+        const progressFill = document.getElementById('progressFill');
+        const timerDisplay = document.getElementById('gameTimer');
+        const totalTime = this.timeLeft;
+
+        this.timer = setInterval(() => {
+            this.timeLeft--;
+            timerDisplay.textContent = this.timeLeft;
+
+            const percentage = (this.timeLeft / totalTime) * 100;
+            if (progressFill) {
+                progressFill.style.width = `${percentage}%`;
+                if (this.timeLeft <= 10) {
+                    progressFill.style.background = '#ff4444';
+                }
+            }
+
+            if (this.timeLeft <= 0) {
+                this.endGame();
+            }
+        }, 1000);
+    }
+
+    playSound(type) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            if (type === 'correct') {
+                osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+                osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2);
+            } else if (type === 'wrong') {
+                osc.frequency.setValueAtTime(200, ctx.currentTime);
+                osc.frequency.setValueAtTime(150, ctx.currentTime + 0.15);
+            } else if (type === 'start') {
+                osc.frequency.setValueAtTime(440, ctx.currentTime);
+                osc.frequency.setValueAtTime(550, ctx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(660, ctx.currentTime + 0.2);
+            }
+
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.3);
+        } catch (e) { }
+    }
+
+    endGame() {
+        this.isPlaying = false;
+        clearInterval(this.timer);
+        this.playSound('correct');
+
+        const accuracy = this.questionsAnswered > 0 ?
+            Math.round((this.correctAnswers / this.questionsAnswered) * 100) : 0;
+        const stars = this.score >= 100 ? 3 : this.score >= 50 ? 2 : 1;
+
+        this.container.innerHTML = `
+            <div class="game-over">
+                <h2>🏁 انتهت اللعبة!</h2>
+                <div class="stars-display">
+                    ${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}
+                </div>
+                <div class="final-score">
+                    <p>مجموع نقاطك: <span class="big-score">${this.score}</span></p>
+                    <p>المستوى: ${this.level} | الدقة: ${accuracy}%</p>
+                    <p>الإجابات الصحيحة: ${this.correctAnswers} من ${this.questionsAnswered}</p>
+                </div>
+                <div class="game-over-buttons">
+                    <button class="game-btn play-again" onclick="startGame('math-race')">🔄 العب مرة أخرى</button>
+                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>
+                </div>
+            </div>
+        `;
+
+        PointsSystem.addPoints(this.score);
+        unlockAchievement('first_game');
+
+        if (this.score >= 100) {
+            unlockAchievement('perfect_score');
+        }
+    }
+}
+
+
+class WordHunterGame {
+    constructor(container) {
+        this.container = container;
+        this.score = 0;
+        this.timeLeft = 60;
+        this.wordsFound = 0;
+        this.currentWordIndex = 0;
+        this.words = [
+            { word: 'مدرسة', hint: 'مكان التعلم', difficulty: 1 },
+            { word: 'كتاب', hint: 'نقرأ فيه', difficulty: 1 },
+            { word: 'قلم', hint: 'نكتب به', difficulty: 1 },
+            { word: 'معلم', hint: 'يعلمنا العلوم', difficulty: 1 },
+            { word: 'صديق', hint: 'رفيق الدرب', difficulty: 1 },
+            { word: 'فصل', hint: 'غرفة الدراسة', difficulty: 1 },
+            { word: 'ورقة', hint: 'نكتب عليها', difficulty: 1 },
+            { word: 'حقيبة', hint: 'نحمل فيها الكتب', difficulty: 2 },
+            { word: 'مسطرة', hint: 'نرسم بها خطوطاً مستقيمة', difficulty: 2 },
+            { word: 'ممحاة', hint: 'نمسح بها الأخطاء', difficulty: 2 },
+            { word: 'طاولة', hint: 'نجلس حولها', difficulty: 2 },
+            { word: 'سبورة', hint: 'يكتب عليها المعلم', difficulty: 2 },
+            { word: 'واجب', hint: 'نكتبه في البيت', difficulty: 2 },
+            { word: 'امتحان', hint: 'نختبر فيه معلوماتنا', difficulty: 3 },
+            { word: 'مختبر', hint: 'نجري فيه التجارب', difficulty: 3 },
+            { word: 'مكتبة', hint: 'فيها الكثير من الكتب', difficulty: 3 }
+        ];
+        this.currentWord = null;
+        this.selectedLetters = [];
+        this.timer = null;
+    }
+
+    start() {
+        this.score = 0;
+        this.timeLeft = 60;
+        this.wordsFound = 0;
+        this.selectedLetters = [];
+        this.shuffleWords();
+        this.currentWordIndex = 0;
+        this.render();
+        this.startTimer();
+        this.nextWord();
+    }
+
+    shuffleWords() {
+        this.words = this.words.sort(() => Math.random() - 0.5);
+    }
+
+    render() {
+        this.container.innerHTML = `
+            <div class="game-header">
+                <h2>🎯 صائد الكلمات</h2>
+                <div class="game-stats">
+                    <span class="score">⭐ النقاط: <b id="gameScore">${this.score}</b></span>
+                    <span class="words">📝 الكلمات: <b id="wordsFound">${this.wordsFound}</b></span>
+                    <span class="timer">⏱️ الوقت: <b id="gameTimer">${this.timeLeft}</b>ث</span>
+                </div>
+            </div>
+            <div class="game-content" id="gameContent"></div>
+        `;
+    }
+
+    nextWord() {
+        if (this.timeLeft <= 0 || this.currentWordIndex >= this.words.length) {
+            this.endGame();
+            return;
+        }
+
+        this.currentWord = this.words[this.currentWordIndex];
+        this.selectedLetters = [];
+        const shuffled = this.shuffleWord(this.currentWord.word);
+
+        document.getElementById('gameContent').innerHTML = `
+            <div class="word-puzzle">
+                <div class="hint-box">
+                    <span class="hint-icon">💡</span>
+                    <span class="hint-text">${this.currentWord.hint}</span>
+                    <span class="difficulty">${'⭐'.repeat(this.currentWord.difficulty)}</span>
+                </div>
+                <div class="shuffled-letters" id="shuffledLetters">
+                    ${shuffled.split('').map((letter, i) => `
+                        <button class="letter-box" data-index="${i}" data-letter="${letter}" onclick="currentGame.selectLetter(this)">
+                            ${letter}
+                        </button>
+                    `).join('')}
+                </div>
+                <div class="answer-display" id="answerDisplay">
+                    ${this.currentWord.word.split('').map(() => '<span class="letter-slot"></span>').join('')}
+                </div>
+                <div class="word-actions">
+                    <button class="game-btn check-btn" onclick="currentGame.checkWord()">✓ تحقق</button>
+                    <button class="game-btn clear-btn" onclick="currentGame.clearSelection()">🔄 مسح</button>
+                    <button class="game-btn skip-btn" onclick="currentGame.skipWord()">⏭️ تخطي</button>
+                </div>
+            </div>
+        `;
+    }
+
+    shuffleWord(word) {
+        let shuffled = word.split('').sort(() => Math.random() - 0.5).join('');
+
+        while (shuffled === word && word.length > 2) {
+            shuffled = word.split('').sort(() => Math.random() - 0.5).join('');
+        }
+        return shuffled;
+    }
+
+    selectLetter(element) {
+        if (element.classList.contains('selected')) return;
+        if (this.selectedLetters.length >= this.currentWord.word.length) return;
+
+        element.classList.add('selected');
+        this.selectedLetters.push(element.dataset.letter);
+        this.updateAnswerDisplay();
+        this.playClickSound();
+    }
+
+    updateAnswerDisplay() {
+        const display = document.getElementById('answerDisplay');
+        const slots = display.querySelectorAll('.letter-slot');
+        slots.forEach((slot, i) => {
+            slot.textContent = this.selectedLetters[i] || '';
+            slot.classList.toggle('filled', !!this.selectedLetters[i]);
+        });
+    }
+
+    clearSelection() {
+        this.selectedLetters = [];
+        document.querySelectorAll('.letter-box').forEach(box => box.classList.remove('selected'));
+        this.updateAnswerDisplay();
+    }
+
+    skipWord() {
+        this.currentWordIndex++;
+        this.nextWord();
+    }
+
+    checkWord() {
+        const answer = this.selectedLetters.join('');
+
+        if (answer === this.currentWord.word) {
+            const points = 20 * this.currentWord.difficulty;
+            this.score += points;
+            this.wordsFound++;
+            document.getElementById('gameScore').textContent = this.score;
+            document.getElementById('wordsFound').textContent = this.wordsFound;
+
+            this.showCorrectFeedback();
+            this.playSound('correct');
+
+            setTimeout(() => {
+                this.currentWordIndex++;
+                this.nextWord();
+            }, 1000);
+        } else {
+            this.showWrongFeedback();
+            this.playSound('wrong');
+            this.clearSelection();
+        }
+    }
+
+    showCorrectFeedback() {
+        const content = document.getElementById('gameContent');
+        content.innerHTML = `
+            <div class="feedback correct">
+                <div class="feedback-icon">✅</div>
+                <div class="feedback-text">أحسنت! الكلمة صحيحة</div>
+                <div class="feedback-word">${this.currentWord.word}</div>
+            </div>
+        `;
+    }
+
+    showWrongFeedback() {
+        const display = document.getElementById('answerDisplay');
+        display.classList.add('shake');
+        setTimeout(() => display.classList.remove('shake'), 500);
+    }
+
+    playClickSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.setValueAtTime(800, ctx.currentTime);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.1);
+        } catch (e) { }
+    }
+
+    playSound(type) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            if (type === 'correct') {
+                osc.frequency.setValueAtTime(523, ctx.currentTime);
+                osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2);
+            } else {
+                osc.frequency.setValueAtTime(200, ctx.currentTime);
+                osc.frequency.setValueAtTime(150, ctx.currentTime + 0.1);
+            }
+
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.3);
+        } catch (e) { }
+    }
+
+    startTimer() {
+        this.timer = setInterval(() => {
+            this.timeLeft--;
+            const timerEl = document.getElementById('gameTimer');
+            if (timerEl) timerEl.textContent = this.timeLeft;
+            if (this.timeLeft <= 0) this.endGame();
+        }, 1000);
+    }
+
+    endGame() {
+        clearInterval(this.timer);
+        const stars = this.wordsFound >= 10 ? 3 : this.wordsFound >= 5 ? 2 : 1;
+
+        this.container.innerHTML = `
+            <div class="game-over">
+                <h2>🏁 انتهت اللعبة!</h2>
+                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+                <div class="final-score">
+                    <p>مجموع نقاطك: <span class="big-score">${this.score}</span></p>
+                    <p>الكلمات المكتشفة: ${this.wordsFound}</p>
+                </div>
+                <div class="game-over-buttons">
+                    <button class="game-btn play-again" onclick="startGame('word-hunter')">🔄 العب مرة أخرى</button>
+                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>
+                </div>
+            </div>
+        `;
+
+        PointsSystem.addPoints(this.score);
+        unlockAchievement('first_game');
+    }
+}
+
+
+class MemoryGame {
+    constructor(container) {
+        this.container = container;
+        this.cards = [];
+        this.flippedCards = [];
+        this.matchedPairs = 0;
+        this.moves = 0;
+        this.timeElapsed = 0;
+        this.timerInterval = null;
+        this.emojis = ['🎨', '🔬', '📚', '🎵', '🌟', '🚀', '🎓', '💡'];
+        this.isLocked = false;
+    }
+
+    start() {
+        this.cards = [...this.emojis, ...this.emojis]
+            .sort(() => Math.random() - 0.5)
+            .map((emoji, index) => ({
+                id: index,
+                emoji,
+                flipped: false,
+                matched: false
+            }));
+
+        this.flippedCards = [];
+        this.matchedPairs = 0;
+        this.moves = 0;
+        this.timeElapsed = 0;
+        this.isLocked = false;
+        this.render();
+        this.startTimer();
+    }
+
+    render() {
+        this.container.innerHTML = `
+            <div class="game-header">
+                <h2>🧠 لعبة الذاكرة</h2>
+                <div class="game-stats">
+                    <span class="moves">🎯 المحاولات: <b id="gameMoves">${this.moves}</b></span>
+                    <span class="pairs">🃏 الأزواج: <b id="gamePairs">${this.matchedPairs}</b>/${this.emojis.length}</span>
+                    <span class="timer">⏱️ الوقت: <b id="gameTimer">0</b>ث</span>
+                </div>
+            </div>
+            <div class="memory-grid" id="memoryGrid">
+                ${this.cards.map(card => `
+                    <div class="memory-card ${card.matched ? 'matched' : ''}" 
+                         data-id="${card.id}">
+                        <div class="card-inner">
+                            <div class="card-front">❓</div>
+                            <div class="card-back">${card.emoji}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+
+        document.querySelectorAll('.memory-card').forEach(card => {
+            card.addEventListener('click', () => this.flipCard(parseInt(card.dataset.id)));
+        });
+    }
+
+    flipCard(id) {
+        if (this.isLocked) return;
+
+        const card = this.cards[id];
+        if (card.flipped || card.matched) return;
+        if (this.flippedCards.length >= 2) return;
+
+        card.flipped = true;
+        this.flippedCards.push(card);
+
+        const cardElement = document.querySelector(`.memory-card[data-id="${id}"]`);
+        cardElement.classList.add('flipped');
+
+        this.playFlipSound();
+
+        if (this.flippedCards.length === 2) {
+            this.moves++;
+            document.getElementById('gameMoves').textContent = this.moves;
+            this.checkMatch();
+        }
+    }
+
+    checkMatch() {
+        const [card1, card2] = this.flippedCards;
+        this.isLocked = true;
+
+        if (card1.emoji === card2.emoji) {
+            card1.matched = true;
+            card2.matched = true;
+            this.matchedPairs++;
+            document.getElementById('gamePairs').textContent = this.matchedPairs;
+
+            const el1 = document.querySelector(`.memory-card[data-id="${card1.id}"]`);
+            const el2 = document.querySelector(`.memory-card[data-id="${card2.id}"]`);
+            el1.classList.add('matched');
+            el2.classList.add('matched');
+
+            this.playMatchSound();
+            this.flippedCards = [];
+            this.isLocked = false;
+
+            if (this.matchedPairs === this.emojis.length) {
+                setTimeout(() => this.endGame(), 500);
+            }
+        } else {
+            setTimeout(() => {
+                card1.flipped = false;
+                card2.flipped = false;
+
+                const el1 = document.querySelector(`.memory-card[data-id="${card1.id}"]`);
+                const el2 = document.querySelector(`.memory-card[data-id="${card2.id}"]`);
+                el1.classList.remove('flipped');
+                el2.classList.remove('flipped');
+
+                this.flippedCards = [];
+                this.isLocked = false;
+            }, 1000);
+        }
+    }
+
+    playFlipSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.setValueAtTime(400, ctx.currentTime);
+            osc.frequency.setValueAtTime(600, ctx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.1);
+        } catch (e) { }
+    }
+
+    playMatchSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.setValueAtTime(523, ctx.currentTime);
+            osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
+            osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2);
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.3);
+        } catch (e) { }
+    }
+
+    startTimer() {
+        this.timerInterval = setInterval(() => {
+            this.timeElapsed++;
+            const timerEl = document.getElementById('gameTimer');
+            if (timerEl) timerEl.textContent = this.timeElapsed;
+        }, 1000);
+    }
+
+    endGame() {
+        clearInterval(this.timerInterval);
+
+        const perfectMoves = this.emojis.length;
+        const efficiency = Math.max(0, Math.round((perfectMoves / this.moves) * 100));
+        const timeBonus = Math.max(0, 60 - this.timeElapsed);
+        const score = Math.max(20, Math.round(efficiency + timeBonus));
+        const stars = efficiency >= 80 ? 3 : efficiency >= 50 ? 2 : 1;
+
+        this.container.innerHTML = `
+            <div class="game-over">
+                <h2>🎉 أحسنت!</h2>
+                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+                <div class="final-score">
+                    <p>نقاطك: <span class="big-score">${score}</span></p>
+                    <p>المحاولات: ${this.moves} | الوقت: ${this.timeElapsed}ث</p>
+                    <p>الكفاءة: ${efficiency}%</p>
+                </div>
+                <div class="game-over-buttons">
+                    <button class="game-btn play-again" onclick="startGame('memory')">🔄 العب مرة أخرى</button>
+                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>
+                </div>
+            </div>
+        `;
+
+        PointsSystem.addPoints(score);
+        unlockAchievement('first_game');
+    }
+}
+
+
+class ScienceQuizGame {
+    constructor(container) {
+        this.container = container;
+        this.score = 0;
+        this.currentQuestion = 0;
+        this.questions = [
+            { q: "ما هو أقرب كوكب للشمس؟", options: ["الأرض", "عطارد", "الزهرة", "المريخ"], answer: 1, icon: "🪐" },
+            { q: "ما هي الغازات التي يتكون منها الماء؟", options: ["أكسجين ونيتروجين", "هيدروجين وأكسجين", "كربون وأكسجين", "هيليوم وهيدروجين"], answer: 1, icon: "💧" },
+            { q: "كم عدد عظام جسم الإنسان البالغ؟", options: ["106", "206", "306", "406"], answer: 1, icon: "🦴" },
+            { q: "ما هو أكبر عضو في جسم الإنسان؟", options: ["القلب", "الكبد", "الجلد", "الرئة"], answer: 2, icon: "🫀" },
+            { q: "ما هي وحدة قياس القوة؟", options: ["جول", "نيوتن", "واط", "أمبير"], answer: 1, icon: "⚡" },
+            { q: "كم عدد ألوان قوس قزح؟", options: ["5", "6", "7", "8"], answer: 2, icon: "🌈" },
+            { q: "ما هو الحيوان الأسرع على الأرض؟", options: ["الأسد", "الفهد", "الحصان", "النمر"], answer: 1, icon: "🐆" },
+            { q: "ما هي المادة التي تنتجها النباتات في عملية البناء الضوئي؟", options: ["الماء", "الأكسجين", "ثاني أكسيد الكربون", "النيتروجين"], answer: 1, icon: "🌱" },
+        ];
+        this.correctAnswers = 0;
+    }
+
+    start() {
+        this.score = 0;
+        this.currentQuestion = 0;
+        this.correctAnswers = 0;
+        this.shuffleQuestions();
+        this.render();
+        this.showQuestion();
+    }
+
+    shuffleQuestions() {
+        this.questions = this.questions.sort(() => Math.random() - 0.5).slice(0, 5);
+    }
+
+    render() {
+        this.container.innerHTML = `
+            <div class="game-header">
+                <h2>🧪 اختبار العلوم</h2>
+                <div class="game-stats">
+                    <span class="score">⭐ النقاط: <b id="gameScore">${this.score}</b></span>
+                    <span class="question">❓ السؤال: <b id="questionNum">${this.currentQuestion + 1}</b>/${this.questions.length}</span>
+                </div>
+            </div>
+            <div class="game-content" id="gameContent"></div>
+        `;
+    }
+
+    showQuestion() {
+        if (this.currentQuestion >= this.questions.length) {
+            this.endGame();
+            return;
+        }
+
+        const q = this.questions[this.currentQuestion];
+        document.getElementById('gameContent').innerHTML = `
+            <div class="quiz-question">
+                <div class="question-icon">${q.icon}</div>
+                <div class="question-text">${q.q}</div>
+                <div class="options-grid">
+                    ${q.options.map((opt, i) => `
+                        <button class="option-btn" data-index="${i}" onclick="currentGame.selectAnswer(${i})">
+                            <span class="option-letter">${String.fromCharCode(65 + i)}</span>
+                            <span class="option-text">${opt}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    selectAnswer(index) {
+        const q = this.questions[this.currentQuestion];
+        const buttons = document.querySelectorAll('.option-btn');
+
+        buttons.forEach(btn => btn.disabled = true);
+
+        if (index === q.answer) {
+            buttons[index].classList.add('correct');
+            this.score += 20;
+            this.correctAnswers++;
+            document.getElementById('gameScore').textContent = this.score;
+            this.playSound('correct');
+        } else {
+            buttons[index].classList.add('wrong');
+            buttons[q.answer].classList.add('correct');
+            this.playSound('wrong');
+        }
+
+        setTimeout(() => {
+            this.currentQuestion++;
+            document.getElementById('questionNum').textContent = Math.min(this.currentQuestion + 1, this.questions.length);
+            this.showQuestion();
+        }, 1500);
+    }
+
+    playSound(type) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            if (type === 'correct') {
+                osc.frequency.setValueAtTime(523, ctx.currentTime);
+                osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2);
+            } else {
+                osc.frequency.setValueAtTime(200, ctx.currentTime);
+            }
+
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.3);
+        } catch (e) { }
+    }
+
+    endGame() {
+        const percentage = Math.round((this.correctAnswers / this.questions.length) * 100);
+        const stars = percentage >= 80 ? 3 : percentage >= 60 ? 2 : 1;
+
+        this.container.innerHTML = `
+            <div class="game-over">
+                <h2>🎉 انتهى الاختبار!</h2>
+                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+                <div class="final-score">
+                    <p>نقاطك: <span class="big-score">${this.score}</span></p>
+                    <p>الإجابات الصحيحة: ${this.correctAnswers} من ${this.questions.length}</p>
+                    <p>النسبة: ${percentage}%</p>
+                </div>
+                <div class="game-over-buttons">
+                    <button class="game-btn play-again" onclick="startGame('science-quiz')">🔄 العب مرة أخرى</button>
+                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>
+                </div>
+            </div>
+        `;
+
+        PointsSystem.addPoints(this.score);
+        unlockAchievement('first_game');
+    }
+}
+
+
+class ColorChallengeGame {
+    constructor(container) {
+        this.container = container;
+        this.score = 0;
+        this.timeLeft = 30;
+        this.currentRound = 0;
+        this.maxRounds = 10;
+        this.timer = null;
+        this.colors = [
+            { name: 'أحمر', hex: '#ff4444', nameEn: 'red' },
+            { name: 'أزرق', hex: '#4444ff', nameEn: 'blue' },
+            { name: 'أخضر', hex: '#44ff44', nameEn: 'green' },
+            { name: 'أصفر', hex: '#ffff44', nameEn: 'yellow' },
+            { name: 'برتقالي', hex: '#ff9944', nameEn: 'orange' },
+            { name: 'بنفسجي', hex: '#9944ff', nameEn: 'purple' },
+            { name: 'وردي', hex: '#ff44ff', nameEn: 'pink' },
+            { name: 'أسود', hex: '#333333', nameEn: 'black' }
+        ];
+    }
+
+    start() {
+        this.score = 0;
+        this.timeLeft = 30;
+        this.currentRound = 0;
+        this.render();
+        this.startTimer();
+        this.nextRound();
+    }
+
+    render() {
+        this.container.innerHTML = `
+            <div class="game-header" style="background: linear-gradient(135deg, #ff6b6b, #ee5a24);">
+                <h2>🎨 تحدي الألوان</h2>
+                <div class="game-stats">
+                    <span>⭐ النقاط: <b id="gameScore">${this.score}</b></span>
+                    <span>🎯 الجولة: <b id="gameRound">${this.currentRound}</b>/${this.maxRounds}</span>
+                    <span>⏱️ الوقت: <b id="gameTimer">${this.timeLeft}</b>ث</span>
+                </div>
+            </div>
+            <div class="game-content" id="gameContent">
+                <p style="color: rgba(255,255,255,0.7); font-size: 1.1rem;">اضغط على اللون الذي يطابق الكلمة، وليس لون الكلمة!</p>
+            </div>
+        `;
+    }
+
+    nextRound() {
+        if (this.currentRound >= this.maxRounds || this.timeLeft <= 0) {
+            this.endGame();
+            return;
+        }
+
+        this.currentRound++;
+        document.getElementById('gameRound').textContent = this.currentRound;
+
+
+        const wordColor = this.colors[Math.floor(Math.random() * this.colors.length)];
+        let textColor;
+        do {
+            textColor = this.colors[Math.floor(Math.random() * this.colors.length)];
+        } while (textColor.name === wordColor.name);
+
+
+        const options = this.shuffleArray([...this.colors]).slice(0, 4);
+        if (!options.find(c => c.name === wordColor.name)) {
+            options[0] = wordColor;
+        }
+        this.shuffleArray(options);
+
+        this.correctAnswer = wordColor.name;
+
+        document.getElementById('gameContent').innerHTML = `
+            <div class="color-challenge">
+                <div class="color-word" style="color: ${textColor.hex}; font-size: 3rem; font-weight: bold; margin: 30px 0;">
+                    ${wordColor.name}
+                </div>
+                <p style="color: rgba(255,255,255,0.6); margin-bottom: 20px;">اختر اللون المكتوب (وليس لون الكلمة)</p>
+                <div class="color-options">
+                    ${options.map(color => `
+                        <button class="color-btn" style="background: ${color.hex};" onclick="currentGame.selectColor('${color.name}')">
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    selectColor(colorName) {
+        if (colorName === this.correctAnswer) {
+            this.score += 15;
+            document.getElementById('gameScore').textContent = this.score;
+            this.playSound('correct');
+            this.nextRound();
+        } else {
+            this.playSound('wrong');
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.style.opacity = '0.5';
+            });
+            setTimeout(() => this.nextRound(), 800);
+        }
+    }
+
+    shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    startTimer() {
+        this.timer = setInterval(() => {
+            this.timeLeft--;
+            const timerEl = document.getElementById('gameTimer');
+            if (timerEl) timerEl.textContent = this.timeLeft;
+            if (this.timeLeft <= 0) this.endGame();
+        }, 1000);
+    }
+
+    playSound(type) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.setValueAtTime(type === 'correct' ? 523 : 200, ctx.currentTime);
+            if (type === 'correct') osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.2);
+        } catch (e) { }
+    }
+
+    endGame() {
+        clearInterval(this.timer);
+        const stars = this.score >= 120 ? 3 : this.score >= 80 ? 2 : 1;
+
+        this.container.innerHTML = `
+            <div class="game-over">
+                <h2>🎨 انتهى التحدي!</h2>
+                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+                <div class="final-score">
+                    <p>نقاطك: <span class="big-score">${this.score}</span></p>
+                    <p>الجولات المكتملة: ${this.currentRound}/${this.maxRounds}</p>
+                </div>
+                <div class="game-over-buttons">
+                    <button class="game-btn play-again" onclick="startGame('color-challenge')">🔄 العب مرة أخرى</button>
+                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>
+                </div>
+            </div>
+        `;
+
+        PointsSystem.addPoints(this.score);
+        unlockAchievement('first_game');
+    }
+}
+
+
+class LetterRaceGame {
+    constructor(container) {
+        this.container = container;
+        this.score = 0;
+        this.timeLeft = 45;
+        this.timer = null;
+        this.currentLetter = '';
+        this.lettersFound = 0;
+    }
+
+    start() {
+        this.score = 0;
+        this.timeLeft = 45;
+        this.lettersFound = 0;
+        this.render();
+        this.startTimer();
+        this.nextRound();
+    }
+
+    render() {
+        this.container.innerHTML = `
+            <div class="game-header" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
+                <h2>🔤 سباق الحروف</h2>
+                <div class="game-stats">
+                    <span>⭐ النقاط: <b id="gameScore">${this.score}</b></span>
+                    <span>🔤 الحروف: <b id="lettersFound">${this.lettersFound}</b></span>
+                    <span>⏱️ الوقت: <b id="gameTimer">${this.timeLeft}</b>ث</span>
+                </div>
+            </div>
+            <div class="game-content" id="gameContent"></div>
+        `;
+    }
+
+    nextRound() {
+        if (this.timeLeft <= 0) {
+            this.endGame();
+            return;
+        }
+
+        const arabicLetters = 'أبتثجحخدذرزسشصضطظعغفقكلمنهوي'.split('');
+        this.currentLetter = arabicLetters[Math.floor(Math.random() * arabicLetters.length)];
+
+
+        const gridSize = 16;
+        const letters = [];
+        const correctPositions = [];
+        const numCorrect = Math.floor(Math.random() * 3) + 2;
+
+        for (let i = 0; i < gridSize; i++) {
+            if (correctPositions.length < numCorrect && Math.random() < 0.3) {
+                letters.push(this.currentLetter);
+                correctPositions.push(i);
+            } else {
+                let randomLetter;
+                do {
+                    randomLetter = arabicLetters[Math.floor(Math.random() * arabicLetters.length)];
+                } while (randomLetter === this.currentLetter);
+                letters.push(randomLetter);
+            }
+        }
+
+
+        if (correctPositions.length === 0) {
+            const pos = Math.floor(Math.random() * gridSize);
+            letters[pos] = this.currentLetter;
+            correctPositions.push(pos);
+        }
+
+        this.correctPositions = correctPositions;
+        this.foundPositions = [];
+
+        document.getElementById('gameContent').innerHTML = `
+            <div class="letter-race">
+                <div class="target-letter">
+                    <span>ابحث عن الحرف:</span>
+                    <span class="big-letter">${this.currentLetter}</span>
+                </div>
+                <div class="letter-grid">
+                    ${letters.map((letter, i) => `
+                        <button class="grid-letter" data-index="${i}" onclick="currentGame.selectLetter(${i}, '${letter}')">
+                            ${letter}
+                        </button>
+                    `).join('')}
+                </div>
+                <button class="game-btn" style="margin-top: 20px;" onclick="currentGame.submitRound()">✓ انتهيت</button>
+            </div>
+        `;
+    }
+
+    selectLetter(index, letter) {
+        const btn = document.querySelector(`.grid-letter[data-index="${index}"]`);
+        if (btn.classList.contains('selected')) {
+            btn.classList.remove('selected');
+            this.foundPositions = this.foundPositions.filter(p => p !== index);
+        } else {
+            btn.classList.add('selected');
+            this.foundPositions.push(index);
+        }
+    }
+
+    submitRound() {
+        let correct = 0;
+        let wrong = 0;
+
+        this.foundPositions.forEach(pos => {
+            if (this.correctPositions.includes(pos)) {
+                correct++;
+            } else {
+                wrong++;
+            }
+        });
+
+        const missed = this.correctPositions.length - correct;
+        const roundScore = (correct * 10) - (wrong * 5) - (missed * 3);
+        this.score += Math.max(0, roundScore);
+        this.lettersFound += correct;
+
+        document.getElementById('gameScore').textContent = this.score;
+        document.getElementById('lettersFound').textContent = this.lettersFound;
+
+
+        document.querySelectorAll('.grid-letter').forEach((btn, i) => {
+            if (this.correctPositions.includes(i)) {
+                btn.style.background = '#00ff88';
+                btn.style.color = '#000';
+            }
+        });
+
+        setTimeout(() => this.nextRound(), 1000);
+    }
+
+    startTimer() {
+        this.timer = setInterval(() => {
+            this.timeLeft--;
+            const timerEl = document.getElementById('gameTimer');
+            if (timerEl) timerEl.textContent = this.timeLeft;
+            if (this.timeLeft <= 0) this.endGame();
+        }, 1000);
+    }
+
+    endGame() {
+        clearInterval(this.timer);
+        const stars = this.score >= 100 ? 3 : this.score >= 50 ? 2 : 1;
+
+        this.container.innerHTML = `
+            <div class="game-over">
+                <h2>🔤 انتهى السباق!</h2>
+                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+                <div class="final-score">
+                    <p>نقاطك: <span class="big-score">${this.score}</span></p>
+                    <p>الحروف التي وجدتها: ${this.lettersFound}</p>
+                </div>
+                <div class="game-over-buttons">
+                    <button class="game-btn play-again" onclick="startGame('letter-race')">🔄 العب مرة أخرى</button>
+                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>
+                </div>
+            </div>
+        `;
+
+        PointsSystem.addPoints(this.score);
+        unlockAchievement('first_game');
+    }
+}
+
+
+class ShapePuzzleGame {
+    constructor(container) {
+        this.container = container;
+        this.score = 0;
+        this.level = 1;
+        this.currentRound = 0;
+        this.maxRounds = 8;
+        this.shapes = ['🔵', '🔴', '🟢', '🟡', '🟣', '🟠', '⬛', '⬜'];
+    }
+
+    start() {
+        this.score = 0;
+        this.level = 1;
+        this.currentRound = 0;
+        this.render();
+        this.nextRound();
+    }
+
+    render() {
+        this.container.innerHTML = `
+            <div class="game-header" style="background: linear-gradient(135deg, #a55eea, #8854d0);">
+                <h2>🧩 لغز الأشكال</h2>
+                <div class="game-stats">
+                    <span>⭐ النقاط: <b id="gameScore">${this.score}</b></span>
+                    <span>📊 المستوى: <b id="gameLevel">${this.level}</b></span>
+                    <span>🎯 الجولة: <b id="gameRound">${this.currentRound}</b>/${this.maxRounds}</span>
+                </div>
+            </div>
+            <div class="game-content" id="gameContent"></div>
+        `;
+    }
+
+    nextRound() {
+        if (this.currentRound >= this.maxRounds) {
+            this.endGame();
+            return;
+        }
+
+        this.currentRound++;
+        document.getElementById('gameRound').textContent = this.currentRound;
+
+
+        const patternLength = 3 + this.level;
+        const pattern = [];
+        for (let i = 0; i < patternLength; i++) {
+            pattern.push(this.shapes[Math.floor(Math.random() * this.shapes.length)]);
+        }
+
+
+        this.correctAnswer = pattern[0];
+
+
+        document.getElementById('gameContent').innerHTML = `
+            <div class="shape-puzzle">
+                <p style="color: rgba(255,255,255,0.7); margin-bottom: 20px;">احفظ النمط التالي:</p>
+                <div class="pattern-display" id="patternDisplay">
+                    ${pattern.map(s => `<span class="pattern-shape">${s}</span>`).join('')}
+                </div>
+                <div class="pattern-countdown" id="countdown">3</div>
+            </div>
+        `;
+
+
+        let count = 3;
+        const countInterval = setInterval(() => {
+            count--;
+            const countEl = document.getElementById('countdown');
+            if (countEl) countEl.textContent = count;
+            if (count <= 0) {
+                clearInterval(countInterval);
+                this.showQuestion(pattern);
+            }
+        }, 1000);
+    }
+
+    showQuestion(pattern) {
+
+        const hiddenIndex = Math.floor(Math.random() * pattern.length);
+        this.correctAnswer = pattern[hiddenIndex];
+
+        const displayPattern = pattern.map((s, i) =>
+            i === hiddenIndex ? '❓' : s
+        );
+
+
+        const options = [this.correctAnswer];
+        while (options.length < 4) {
+            const randomShape = this.shapes[Math.floor(Math.random() * this.shapes.length)];
+            if (!options.includes(randomShape)) {
+                options.push(randomShape);
+            }
+        }
+        this.shuffleArray(options);
+
+        document.getElementById('gameContent').innerHTML = `
+            <div class="shape-puzzle">
+                <p style="color: rgba(255,255,255,0.7); margin-bottom: 20px;">ما هو الشكل المفقود؟</p>
+                <div class="pattern-display">
+                    ${displayPattern.map(s => `<span class="pattern-shape">${s}</span>`).join('')}
+                </div>
+                <div class="shape-options">
+                    ${options.map(shape => `
+                        <button class="shape-btn" onclick="currentGame.selectShape('${shape}')">${shape}</button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    selectShape(shape) {
+        if (shape === this.correctAnswer) {
+            this.score += 20 * this.level;
+            document.getElementById('gameScore').textContent = this.score;
+            this.playSound('correct');
+
+            if (this.currentRound % 3 === 0 && this.level < 3) {
+                this.level++;
+                document.getElementById('gameLevel').textContent = this.level;
+            }
+
+            setTimeout(() => this.nextRound(), 500);
+        } else {
+            this.playSound('wrong');
+            document.querySelectorAll('.shape-btn').forEach(btn => {
+                if (btn.textContent === this.correctAnswer) {
+                    btn.style.transform = 'scale(1.3)';
+                    btn.style.boxShadow = '0 0 20px #00ff88';
+                }
+            });
+            setTimeout(() => this.nextRound(), 1500);
+        }
+    }
+
+    shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    playSound(type) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.setValueAtTime(type === 'correct' ? 523 : 200, ctx.currentTime);
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.2);
+        } catch (e) { }
+    }
+
+    endGame() {
+        const stars = this.score >= 150 ? 3 : this.score >= 80 ? 2 : 1;
+
+        this.container.innerHTML = `
+            <div class="game-over">
+                <h2>🧩 أحسنت!</h2>
+                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+                <div class="final-score">
+                    <p>نقاطك: <span class="big-score">${this.score}</span></p>
+                    <p>المستوى: ${this.level}</p>
+                </div>
+                <div class="game-over-buttons">
+                    <button class="game-btn play-again" onclick="startGame('shape-puzzle')">🔄 العب مرة أخرى</button>
+                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>
+                </div>
+            </div>
+        `;
+
+        PointsSystem.addPoints(this.score);
+        unlockAchievement('first_game');
+    }
+}
+
+
+class SpaceAdventureGame {
+    constructor(container) {
+        this.container = container;
+        this.score = 0;
+        this.currentQuestion = 0;
+        this.questions = [
+            { q: "كم عدد كواكب المجموعة الشمسية؟", options: ["7", "8", "9", "10"], answer: 1, icon: "🪐" },
+            { q: "ما هو أكبر كوكب في المجموعة الشمسية؟", options: ["الأرض", "المريخ", "المشتري", "زحل"], answer: 2, icon: "🌍" },
+            { q: "ما هو أقرب نجم للأرض؟", options: ["القمر", "الشمس", "المريخ", "الزهرة"], answer: 1, icon: "☀️" },
+            { q: "كم يستغرق دوران الأرض حول نفسها؟", options: ["12 ساعة", "24 ساعة", "7 أيام", "30 يوم"], answer: 1, icon: "🌎" },
+            { q: "ما هو الكوكب الأحمر؟", options: ["الزهرة", "المريخ", "عطارد", "نبتون"], answer: 1, icon: "🔴" },
+            { q: "ما اسم مجرتنا؟", options: ["المرأة المسلسلة", "درب التبانة", "السديم", "أورايون"], answer: 1, icon: "🌌" },
+            { q: "من هو أول رائد فضاء عربي؟", options: ["سلطان النيادي", "هزاع المنصوري", "محمد فارس", "عبدالله الصاوي"], answer: 2, icon: "👨‍🚀" },
+            { q: "كم قمراً يدور حول كوكب المشتري؟", options: ["أقل من 10", "بين 10-50", "أكثر من 50", "لا يوجد"], answer: 2, icon: "🌙" },
+        ];
+        this.correctAnswers = 0;
+        this.rocketPosition = 0;
+    }
+
+    start() {
+        this.score = 0;
+        this.currentQuestion = 0;
+        this.correctAnswers = 0;
+        this.rocketPosition = 0;
+        this.shuffleQuestions();
+        this.render();
+        this.showQuestion();
+    }
+
+    shuffleQuestions() {
+        this.questions = this.questions.sort(() => Math.random() - 0.5).slice(0, 5);
+    }
+
+    render() {
+        this.container.innerHTML = `
+            <div class="game-header" style="background: linear-gradient(135deg, #302b63, #24243e);">
+                <h2>🚀 مغامرة الفضاء</h2>
+                <div class="game-stats">
+                    <span>⭐ النقاط: <b id="gameScore">${this.score}</b></span>
+                    <span>🚀 المرحلة: <b id="questionNum">${this.currentQuestion + 1}</b>/${this.questions.length}</span>
+                </div>
+            </div>
+            <div class="space-progress">
+                <div class="space-track">
+                    <div class="rocket" id="rocket">🚀</div>
+                    <div class="planets">
+                        ${this.questions.map((_, i) => `<span class="planet-marker" style="left: ${((i + 1) / this.questions.length) * 100}%">🪐</span>`).join('')}
+                    </div>
+                </div>
+            </div>
+            <div class="game-content" id="gameContent"></div>
+        `;
+    }
+
+    showQuestion() {
+        if (this.currentQuestion >= this.questions.length) {
+            this.endGame();
+            return;
+        }
+
+        const q = this.questions[this.currentQuestion];
+        document.getElementById('gameContent').innerHTML = `
+            <div class="space-question">
+                <div class="question-icon" style="font-size: 4rem; margin-bottom: 15px;">${q.icon}</div>
+                <div class="question-text" style="font-size: 1.3rem; color: white; margin-bottom: 25px;">${q.q}</div>
+                <div class="options-grid">
+                    ${q.options.map((opt, i) => `
+                        <button class="option-btn space-option" data-index="${i}" onclick="currentGame.selectAnswer(${i})">
+                            <span class="option-letter">${String.fromCharCode(65 + i)}</span>
+                            <span class="option-text">${opt}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    selectAnswer(index) {
+        const q = this.questions[this.currentQuestion];
+        const buttons = document.querySelectorAll('.space-option');
+
+        buttons.forEach(btn => btn.disabled = true);
+
+        if (index === q.answer) {
+            buttons[index].classList.add('correct');
+            this.score += 25;
+            this.correctAnswers++;
+            document.getElementById('gameScore').textContent = this.score;
+            this.moveRocket();
+            this.playSound('correct');
+        } else {
+            buttons[index].classList.add('wrong');
+            buttons[q.answer].classList.add('correct');
+            this.playSound('wrong');
+        }
+
+        setTimeout(() => {
+            this.currentQuestion++;
+            const numEl = document.getElementById('questionNum');
+            if (numEl) numEl.textContent = Math.min(this.currentQuestion + 1, this.questions.length);
+            this.showQuestion();
+        }, 1500);
+    }
+
+    moveRocket() {
+        this.rocketPosition = ((this.currentQuestion + 1) / this.questions.length) * 100;
+        const rocket = document.getElementById('rocket');
+        if (rocket) {
+            rocket.style.left = `${this.rocketPosition}%`;
+        }
+    }
+
+    playSound(type) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            if (type === 'correct') {
+                osc.frequency.setValueAtTime(392, ctx.currentTime);
+                osc.frequency.setValueAtTime(523, ctx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(659, ctx.currentTime + 0.2);
+            } else {
+                osc.frequency.setValueAtTime(200, ctx.currentTime);
+            }
+
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.3);
+        } catch (e) { }
+    }
+
+    endGame() {
+        const percentage = Math.round((this.correctAnswers / this.questions.length) * 100);
+        const stars = percentage >= 80 ? 3 : percentage >= 60 ? 2 : 1;
+
+        this.container.innerHTML = `
+            <div class="game-over">
+                <h2>🚀 وصلت إلى الفضاء!</h2>
+                <div class="stars-display">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+                <div class="final-score">
+                    <p>نقاطك: <span class="big-score">${this.score}</span></p>
+                    <p>الإجابات الصحيحة: ${this.correctAnswers} من ${this.questions.length}</p>
+                </div>
+                <div class="game-over-buttons">
+                    <button class="game-btn play-again" onclick="startGame('space-adventure')">🔄 العب مرة أخرى</button>
+                    <button class="game-btn close-game" onclick="closeGameModal()">🏠 العودة</button>
+                </div>
+            </div>
+        `;
+
+        PointsSystem.addPoints(this.score);
+        unlockAchievement('first_game');
+    }
+}
+
+
+let currentGame = null;
+
+
+function startGame(gameId) {
+    const modal = document.getElementById('gameModal');
+    const container = document.getElementById('gameContainer');
+
+    if (!modal || !container) {
+        console.error('Game modal or container not found');
+        return;
+    }
+
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    switch (gameId) {
+        case 'math-race':
+            currentGame = new MathRaceGame(container);
+            break;
+        case 'word-hunter':
+            currentGame = new WordHunterGame(container);
+            break;
+        case 'memory':
+            currentGame = new MemoryGame(container);
+            break;
+        case 'science-quiz':
+            currentGame = new ScienceQuizGame(container);
+            break;
+        case 'color-challenge':
+            currentGame = new ColorChallengeGame(container);
+            break;
+        case 'letter-race':
+            currentGame = new LetterRaceGame(container);
+            break;
+        case 'shape-puzzle':
+            currentGame = new ShapePuzzleGame(container);
+            break;
+        case 'space-adventure':
+            currentGame = new SpaceAdventureGame(container);
+            break;
+        default:
+            currentGame = new MathRaceGame(container);
+    }
+
+    if (currentGame) currentGame.start();
+}
+
+
+function renderGames() {
+    const slider = document.getElementById('gamesSlider');
+    if (!slider) return;
+
+    const games = [
+        { id: 'math-race', title: 'سباق الأرقام', description: 'تحدى نفسك في الرياضيات!', icon: '🏎️', difficulty: 'سهل', points: 100, color: 'linear-gradient(135deg, #ffd700, #ff9a00)' },
+        { id: 'word-hunter', title: 'صائد الكلمات', description: 'اكتشف الكلمات المخفية', icon: '🎯', difficulty: 'متوسط', points: 150, color: 'linear-gradient(135deg, #667eea, #764ba2)' },
+        { id: 'science-quiz', title: 'اختبار العلوم', description: 'اختبر معلوماتك العلمية', icon: '🧪', difficulty: 'متوسط', points: 200, color: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
+        { id: 'memory', title: 'لعبة الذاكرة', description: 'قوِّ ذاكرتك!', icon: '🧠', difficulty: 'سهل', points: 80, color: 'linear-gradient(135deg, #f093fb, #f5576c)' },
+        { id: 'color-challenge', title: 'تحدي الألوان', description: 'اختر اللون الصحيح!', icon: '🎨', difficulty: 'متوسط', points: 120, color: 'linear-gradient(135deg, #ff6b6b, #ee5a24)' },
+        { id: 'letter-race', title: 'سباق الحروف', description: 'ابحث عن الحروف العربية', icon: '🔤', difficulty: 'سهل', points: 100, color: 'linear-gradient(135deg, #11998e, #38ef7d)' },
+        { id: 'shape-puzzle', title: 'لغز الأشكال', description: 'احفظ النمط وأكمله!', icon: '🧩', difficulty: 'صعب', points: 180, color: 'linear-gradient(135deg, #a55eea, #8854d0)' },
+        { id: 'space-adventure', title: 'مغامرة الفضاء', description: 'استكشف أسرار الكون!', icon: '🚀', difficulty: 'متوسط', points: 150, color: 'linear-gradient(135deg, #302b63, #24243e)' },
+        {
+            id: 'iq-mini',
+            title: 'اختبار الذكاء المصغّر',
+            description: 'اكتشف مستوى ذكائك واختبر سرعة التفكير!',
+            icon: '🧠',
+            difficulty: 'شامل',
+            points: 500,
+            color: 'linear-gradient(135deg, #FF6B6B, #4ECDC4)',
+            url: 'games/iq-mini/index.html'
+        },
+        {
+            id: 'coloring',
+            title: 'لعبة التلوين المبدع',
+            description: 'اختر رسمة وابدأ التلوين بألوان جميلة!',
+            icon: '🎨',
+            difficulty: 'ممتع',
+            points: 200,
+            color: 'linear-gradient(135deg, #FF9A9E, #FECFEF)',
+            url: 'games/coloring/index.html'
+        },
+        {
+            id: 'sentence-builder',
+            title: 'لعبة تكوين الجمل',
+            description: 'رتّب الكلمات وصمّم الجملة الصحيحة!',
+            icon: '✏️',
+            difficulty: 'تعليمي',
+            points: 150,
+            color: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+            url: 'games/sentence-builder/index.html'
+        },
+        {
+            id: 'puzzle-game',
+            title: 'لعبة ترتيب الصورة 🧩',
+            type: 'puzzle',
+            description: 'اركب القطع لتكتمل الصورة!',
+            difficulty: 'سهل',
+            points: 100,
+            icon: '🧩',
+            color: 'linear-gradient(135deg, #FF9F43 0%, #FECA57 100%)',
+            url: 'games/puzzle/index.html'
+        }
+    ];
+
+    slider.innerHTML = games.map(game => {
+        if (game.url) {
+
+            return `
+            <a href="${game.url}" class="game-card" style="text-decoration: none; color: inherit; display: block;">
+                <div class="game-card-image" style="background: ${game.color};">
+                    ${game.icon}
+                </div>
+                <div class="game-card-content">
+                    <h3 class="game-card-title">${game.title}</h3>
+                    <p>${game.description}</p>
+                    <span class="game-card-type">${game.difficulty}</span>
+                    <span class="game-points">+${game.points} نقطة</span>
+                </div>
+            </a>`;
+        } else {
+
+            return `
+            <div class="game-card" onclick="startGame('${game.id}')">
+                <div class="game-card-image" style="background: ${game.color};">
+                    ${game.icon}
+                </div>
+                <div class="game-card-content">
+                    <h3 class="game-card-title">${game.title}</h3>
+                    <p>${game.description}</p>
+                    <span class="game-card-type">${game.difficulty}</span>
+                    <span class="game-points">+${game.points} نقطة</span>
+                </div>
+            </div>`;
+        }
+    }).join('');
+}
+
+
+function closeGameModal() {
+    const modal = document.getElementById('gameModal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    if (currentGame && currentGame.timer) {
+        clearInterval(currentGame.timer);
+    }
+    if (currentGame && currentGame.timerInterval) {
+        clearInterval(currentGame.timerInterval);
+    }
+    currentGame = null;
+}
+
+
+window.startGame = startGame;
+window.renderGames = renderGames;
+window.closeGameModal = closeGameModal;
+window.PointsSystem = PointsSystem;
+window.AchievementsSystem = AchievementsSystem;
+window.unlockAchievement = unlockAchievement;
+window.currentGame = currentGame;
